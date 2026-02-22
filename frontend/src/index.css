@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-forest-950 text-slate-100 antialiased selection:bg-forest-500 selection:text-white;
+  }
+}
+
+.glass-panel {
+  @apply bg-forest-900/60 backdrop-blur-md border border-forest-800/50 shadow-glass;
+}
