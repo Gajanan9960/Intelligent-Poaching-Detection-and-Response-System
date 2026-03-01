@@ -1,76 +1,101 @@
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AlertTriangle, CheckCircle2, Info, X, Shield } from 'lucide-react';
 
-// Simple pub/sub for toast notifications without needing a full Context if not desired
+// ─── Pub/Sub Store ─────────────────────────────────────────
 const listeners = new Set();
-let toasts = [];
+let toastList = [];
 
 export const toast = {
     add: (message, type = 'info', duration = 5000) => {
-        const id = Math.random().toString(36).substr(2, 9);
-        const toast = { id, message, type };
-        toasts = [toast, ...toasts].slice(0, 3); // Max 3 toasts
+        const id = Math.random().toString(36).substring(2, 9);
+        const entry = { id, message, type };
+        toastList = [entry, ...toastList].slice(0, 4); // max 4 toasts
+        listeners.forEach(fn => fn([...toastList]));
 
-        listeners.forEach(listener => listener(toasts));
-
-        if (duration) {
-            setTimeout(() => {
-                toast.dismiss(id);
-            }, duration);
+        if (duration && duration > 0) {
+            setTimeout(() => toast.dismiss(id), duration);
         }
         return id;
     },
-    success: (msg, duration) => toast.add(msg, 'success', duration),
-    error: (msg, duration) => toast.add(msg, 'error', duration),
-    warning: (msg, duration) => toast.add(msg, 'warning', duration),
-    info: (msg, duration) => toast.add(msg, 'info', duration),
+    success: (msg, duration = 5000) => toast.add(msg, 'success', duration),
+    error: (msg, duration = 6000) => toast.add(msg, 'error', duration),
+    warning: (msg, duration = 5000) => toast.add(msg, 'warning', duration),
+    info: (msg, duration = 4000) => toast.add(msg, 'info', duration),
     dismiss: (id) => {
-        toasts = toasts.filter(t => t.id !== id);
-        listeners.forEach(listener => listener(toasts));
-    }
+        toastList = toastList.filter(t => t.id !== id);
+        listeners.forEach(fn => fn([...toastList]));
+    },
+    dismissAll: () => {
+        toastList = [];
+        listeners.forEach(fn => fn([]));
+    },
 };
 
+const typeConfig = {
+    error: {
+        icon: <AlertTriangle className="h-4 w-4" />,
+        bar: 'bg-alert-500',
+        iconClass: 'text-alert-400',
+    },
+    success: {
+        icon: <CheckCircle2 className="h-4 w-4" />,
+        bar: 'bg-forest-400',
+        iconClass: 'text-forest-400',
+    },
+    warning: {
+        icon: <AlertTriangle className="h-4 w-4" />,
+        bar: 'bg-amber-500',
+        iconClass: 'text-amber-400',
+    },
+    info: {
+        icon: <Info className="h-4 w-4" />,
+        bar: 'bg-info-400',
+        iconClass: 'text-info-400',
+    },
+};
+
+// ─── Toast Container ───────────────────────────────────────
 export function ToastContainer() {
-    const [currentToasts, setCurrentToasts] = useState(toasts);
+    const [toasts, setToasts] = useState([]);
 
     useEffect(() => {
-        const handleToastsChange = (newToasts) => {
-            setCurrentToasts([...newToasts]);
-        };
-        listeners.add(handleToastsChange);
-        return () => listeners.delete(handleToastsChange);
+        const handler = (updated) => setToasts(updated);
+        listeners.add(handler);
+        return () => listeners.delete(handler);
     }, []);
 
-    if (currentToasts.length === 0) return null;
+    if (toasts.length === 0) return null;
 
     return (
-        <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-sm">
-            {currentToasts.map((t) => (
-                <div
-                    key={t.id}
-                    className="pointer-events-auto shadow-2xl rounded-lg overflow-hidden border border-forest-700/50 glass-panel flex animate-in slide-in-from-right-8 fade-in duration-300"
-                >
-                    <div className={`w-1.5 shrink-0 ${t.type === 'error' ? 'bg-alert-500' :
-                            t.type === 'success' ? 'bg-forest-400' :
-                                t.type === 'warning' ? 'bg-yellow-500' : 'bg-slate-400'
-                        }`} />
-                    <div className="flex-1 flex items-center p-4 bg-forest-950/90 gap-3">
-                        {t.type === 'error' && <AlertTriangle className="h-5 w-5 text-alert-500 shrink-0" />}
-                        {t.type === 'success' && <CheckCircle2 className="h-5 w-5 text-forest-500 shrink-0" />}
-                        {t.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0" />}
-                        {t.type === 'info' && <Info className="h-5 w-5 text-slate-400 shrink-0" />}
-
-                        <p className="text-sm font-medium text-slate-200 flex-1">{t.message}</p>
-
-                        <button
-                            onClick={() => toast.dismiss(t.id)}
-                            className="shrink-0 text-slate-500 hover:text-slate-200 transition-colors p-1"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
+        <div
+            className="fixed top-4 right-4 z-[200] flex flex-col gap-2 w-full max-w-sm pointer-events-none"
+            aria-live="polite"
+            aria-label="Notifications"
+        >
+            {toasts.map(t => (
+                <ToastItem key={t.id} toast={t} onDismiss={() => toast.dismiss(t.id)} />
             ))}
+        </div>
+    );
+}
+
+function ToastItem({ toast: t, onDismiss }) {
+    const cfg = typeConfig[t.type] || typeConfig.info;
+
+    return (
+        <div className="pointer-events-auto glass-panel-dark rounded-lg overflow-hidden border border-forest-700/60 shadow-panel flex animate-slide-in-right">
+            <div className={`w-1 shrink-0 ${cfg.bar}`} />
+            <div className="flex flex-1 items-start gap-3 p-3 bg-forest-950/90">
+                <span className={`shrink-0 mt-0.5 ${cfg.iconClass}`}>{cfg.icon}</span>
+                <p className="text-sm text-slate-200 flex-1 leading-snug">{t.message}</p>
+                <button
+                    onClick={onDismiss}
+                    className="shrink-0 text-forest-500 hover:text-slate-200 transition-colors p-0.5 rounded mt-0.5"
+                    aria-label="Dismiss notification"
+                >
+                    <X className="h-3.5 w-3.5" />
+                </button>
+            </div>
         </div>
     );
 }

@@ -1,35 +1,123 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PageLoader } from './components/common/Spinner';
+import { ToastContainer } from './components/common/Toast';
+
+// Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import { ToastContainer } from './components/common/Toast';
+import UploadVideo from './pages/UploadVideo';
+import DetectionResults from './pages/DetectionResults';
+import AlertsPage from './pages/AlertsPage';
+import SystemSettings from './pages/SystemSettings';
+import NotFound from './pages/NotFound';
 
+// ─── Protected Route Guard ─────────────────────────────────
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
-  if (loading) return <div className="min-h-screen bg-forest-950 flex items-center justify-center">
-    <div className="h-12 w-12 border-4 border-forest-700 border-t-forest-400 rounded-full animate-spin" />
-  </div>;
-  if (!user) return <Navigate to="/login" />;
-
+  if (loading) {
+    return <PageLoader message="Authenticating secure channel..." />;
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
   return children;
 };
 
+// ─── Public Route Guard (redirect to dashboard if logged in) ──
+const PublicRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <PageLoader message="Authenticating secure channel..." />;
+  }
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+// ─── Route Definitions ─────────────────────────────────────
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
+      {/* Public routes */}
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
+        }
+      />
+
+      {/* Protected routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/upload"
+        element={
+          <ProtectedRoute>
+            <UploadVideo />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/detections"
+        element={
+          <ProtectedRoute>
+            <DetectionResults />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/detections/:id"
+        element={
+          <ProtectedRoute>
+            <DetectionResults />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/alerts"
+        element={
+          <ProtectedRoute>
+            <AlertsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SystemSettings />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 404 */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
 
+// ─── Root App ──────────────────────────────────────────────
 function App() {
   return (
     <Router>

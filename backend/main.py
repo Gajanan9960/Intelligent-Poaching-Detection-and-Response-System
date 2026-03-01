@@ -1,30 +1,46 @@
+import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from backend.core.config import settings
 from backend.db.mongodb import connect_to_mongo, close_mongo_connection
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    await connect_to_mongo()
+    # Ensure static directories exist
+    os.makedirs("backend/static/videos", exist_ok=True)
+    os.makedirs("backend/static/images", exist_ok=True)
+    yield
+    # Shutdown
+    await close_mongo_connection()
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
 
-# Set all CORS enabled origins
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# CORS — allow all configured origins + always allow localhost dev ports
+cors_origins = list(settings.BACKEND_CORS_ORIGINS)
+# Ensure common dev URLs are always included
+for url in ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"]:
+    if url not in cors_origins:
+        cors_origins.append(url)
 
-@app.on_event("startup")
-async def startup_event():
-    await connect_to_mongo()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    await close_mongo_connection()
+# Serve static files (detection images, etc.)
+if os.path.isdir("backend/static"):
+    app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
 @app.get("/")
 async def root():
@@ -32,3 +48,7 @@ async def root():
 
 from backend.api.v1.api import api_router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

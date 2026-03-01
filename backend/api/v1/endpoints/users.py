@@ -1,5 +1,5 @@
-from typing import Any, List
-from fastapi import APIRouter, Body, Depends, HTTPException
+from typing import Any
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from backend.api import deps
 from backend.core import security
@@ -29,8 +29,8 @@ async def create_user(
     del user_data["password"]
     user_data["hashed_password"] = hashed_password
     
-    new_user = await db.users.insert_one(user_data)
-    created_user = await db.users.find_one({"_id": new_user.inserted_id})
+    result = await db.users.insert_one(user_data)
+    created_user = await db.users.find_one({"_id": result.inserted_id})
     
     return User(**created_user, id=str(created_user["_id"]))
 

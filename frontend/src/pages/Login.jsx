@@ -6,8 +6,8 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 
 export default function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('admin@guardian.io');
+    const [password, setPassword] = useState('password123');
     const { login } = useAuth();
     const navigate = useNavigate();
     const [error, setError] = useState('');

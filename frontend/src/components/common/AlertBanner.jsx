@@ -1,0 +1,58 @@
+import React from 'react';
+import { AlertTriangle, Shield, Info, X, Mail } from 'lucide-react';
+
+/**
+ * AlertBanner - Displays contextual alerts for detection results.
+ * type: 'critical' | 'warning' | 'info' | 'success'
+ */
+export function AlertBanner({ type = 'info', title, message, emailSent, onDismiss, className = '' }) {
+    const config = {
+        critical: {
+            wrapper: 'alert-banner-critical',
+            icon: <AlertTriangle className="h-5 w-5 text-alert-400 shrink-0 mt-0.5" />,
+            titleClass: 'text-alert-300 font-semibold',
+            msgClass: 'text-alert-200/80',
+        },
+        warning: {
+            wrapper: 'alert-banner-warning',
+            icon: <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />,
+            titleClass: 'text-amber-300 font-semibold',
+            msgClass: 'text-amber-200/80',
+        },
+        info: {
+            wrapper: 'alert-banner-info',
+            icon: <Info className="h-5 w-5 text-info-400 shrink-0 mt-0.5" />,
+            titleClass: 'text-info-300 font-semibold',
+            msgClass: 'text-info-200/80',
+        },
+        success: {
+            wrapper: 'bg-forest-950/90 border border-forest-700/70 text-forest-100 rounded-lg p-4 flex items-start gap-3',
+            icon: <Shield className="h-5 w-5 text-forest-400 shrink-0 mt-0.5" />,
+            titleClass: 'text-forest-300 font-semibold',
+            msgClass: 'text-forest-200/80',
+        },
+    };
+
+    const { wrapper, icon, titleClass, msgClass } = config[type] || config.info;
+
+    return (
+        <div className={`${wrapper} ${className} animate-slide-up`}>
+            {icon}
+            <div className="flex-1 min-w-0">
+                {title && <p className={`text-sm ${titleClass}`}>{title}</p>}
+                {message && <p className={`text-xs mt-0.5 ${msgClass}`}>{message}</p>}
+                {emailSent && (
+                    <p className="flex items-center gap-1.5 text-xs mt-2 text-forest-400">
+                        <Mail className="h-3 w-3" />
+                        Alert notification dispatched to response team.
+                    </p>
+                )}
+            </div>
+            {onDismiss && (
+                <button onClick={onDismiss} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1 rounded">
+                    <X className="h-3.5 w-3.5" />
+                </button>
+            )}
+        </div>
+    );
+}
