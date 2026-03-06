@@ -1,0 +1,18 @@
+Here are the terminal commands you need to run to upload all our recent code changes and project documents to GitHub:
+
+1. First, make sure you are in the root directory of your project:
+   cd "/Users/gajanan/Projects/Intelligent Poaching Detection and Response System"
+
+2. Check what files have been modified or added:
+   git status
+
+3. Stage all the changed files (including the new React UI pages, the backend fixes, and the design docs):
+   git add .
+
+4. Commit the changes with a descriptive message:
+   git commit -m "Rebuilt frontend UI components, updated landing page, and fixed backend startup issues"
+
+5. Finally, push the updated code to your GitHub repository:
+   git push origin main
+
+Note: If your main branch is called 'master' instead of 'main', then run `git push origin master` instead in step 5.

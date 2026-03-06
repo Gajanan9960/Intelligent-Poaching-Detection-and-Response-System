@@ -12,6 +12,7 @@ import DetectionResults from './pages/DetectionResults';
 import AlertsPage from './pages/AlertsPage';
 import SystemSettings from './pages/SystemSettings';
 import NotFound from './pages/NotFound';
+import Landing from './pages/Landing';
 
 // ─── Protected Route Guard ─────────────────────────────────
 const ProtectedRoute = ({ children }) => {
@@ -44,6 +45,7 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={<Landing />} />
       <Route
         path="/login"
         element={
@@ -63,7 +65,7 @@ function AppRoutes() {
 
       {/* Protected routes */}
       <Route
-        path="/"
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Dashboard />

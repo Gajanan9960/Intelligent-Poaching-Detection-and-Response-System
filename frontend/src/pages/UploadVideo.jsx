@@ -5,7 +5,7 @@ import { AlertBanner } from '../components/common/AlertBanner';
 import { videoService } from '../api/services';
 import {
     UploadCloud, CheckCircle2, AlertTriangle, X,
-    FileVideo, Gauge, RefreshCw
+    FileVideo, Activity, Target
 } from 'lucide-react';
 
 const MAX_SIZE_MB = 200;
@@ -75,7 +75,6 @@ export default function UploadVideo() {
             await videoService.upload(file, (pct) => setProgress(pct));
             setProgress(100);
             setResult('success');
-            // Clear after 4 seconds on success
             setTimeout(clearSelection, 4000);
         } catch (err) {
             const msg = err.code === 'ERR_NETWORK'
@@ -98,38 +97,41 @@ export default function UploadVideo() {
             title="Upload Surveillance Footage"
             subtitle="Submit video feeds for AI-powered threat detection analysis"
         >
-            <div className="p-6 max-w-4xl mx-auto space-y-6 animate-fade-in">
+            <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8 animate-fade-in text-slate-100">
 
                 {/* Result banners */}
                 {result === 'success' && (
-                    <AlertBanner
-                        type="success"
-                        title="Feed transmitted successfully"
-                        message="Your video has been queued for analysis. Detection results will appear in the incident logs shortly."
-                        emailSent={true}
-                        onDismiss={() => setResult(null)}
-                    />
+                    <div className="bg-emerald-500/10 border border-emerald-500/40 text-emerald-100 rounded-xl p-4 flex gap-4 items-start shadow-[0_0_20px_rgba(52,211,153,0.15)]">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+                        <div>
+                            <h4 className="font-semibold text-emerald-300">Feed transmitted successfully</h4>
+                            <p className="text-sm mt-1 opacity-80">Your video has been queued for analysis. Results will appear in the incident logs.</p>
+                        </div>
+                        <button onClick={() => setResult(null)} className="ml-auto opacity-60 hover:opacity-100"><X className="w-5 h-5" /></button>
+                    </div>
                 )}
                 {result === 'error' && (
-                    <AlertBanner
-                        type="critical"
-                        title="Transmission failed"
-                        message={errorMsg}
-                        onDismiss={() => { setResult(null); setErrorMsg(''); }}
-                    />
+                    <div className="bg-red-500/10 border border-red-500/40 text-red-100 rounded-xl p-4 flex gap-4 items-start shadow-[0_0_20px_rgba(239,68,68,0.15)]">
+                        <AlertTriangle className="w-6 h-6 text-red-400 shrink-0" />
+                        <div>
+                            <h4 className="font-semibold text-red-300">Transmission failed</h4>
+                            <p className="text-sm mt-1 opacity-80">{errorMsg}</p>
+                        </div>
+                        <button onClick={() => { setResult(null); setErrorMsg(''); }} className="ml-auto opacity-60 hover:opacity-100"><X className="w-5 h-5" /></button>
+                    </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                    {/* Upload Area (left 3 cols) */}
-                    <div className="lg:col-span-3">
-                        <form onSubmit={handleUpload} className="space-y-4">
-                            {/* Drop zone */}
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left: Upload Area (2 columns) */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <form onSubmit={handleUpload}>
                             {!file ? (
                                 <div
-                                    className={`relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center p-12 cursor-pointer transition-all duration-200 min-h-[320px] ${isDragging
-                                            ? 'border-forest-400 bg-forest-900/30 scale-[1.01]'
-                                            : 'border-forest-700/50 hover:border-forest-600 hover:bg-forest-900/20 bg-forest-950/30'
-                                        }`}
+                                    className={`relative rounded-3xl overflow-hidden border-2 border-dashed flex flex-col items-center justify-center text-center p-12 cursor-pointer transition-all duration-300 min-h-[400px] ${isDragging
+                                        ? 'border-emerald-400 bg-emerald-900/20 scale-[1.02] shadow-[0_0_40px_rgba(52,211,153,0.15)]'
+                                        : 'border-white/10 hover:border-emerald-500/40 bg-white/5 hover:bg-emerald-900/10'
+                                        } backdrop-blur-sm`}
                                     onDragOver={handleDragOver}
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
@@ -144,80 +146,86 @@ export default function UploadVideo() {
                                         className="hidden"
                                         onChange={(e) => validateAndSetFile(e.target.files[0])}
                                     />
-                                    <div className={`p-5 rounded-2xl mb-5 transition-colors ${isDragging ? 'bg-forest-700' : 'bg-forest-900'}`}>
-                                        <UploadCloud className={`h-10 w-10 transition-colors ${isDragging ? 'text-forest-300' : 'text-forest-500'}`} />
+                                    <div className={`p-6 rounded-3xl mb-6 transition-colors shadow-inner ${isDragging ? 'bg-emerald-500/20' : 'bg-black/20'}`}>
+                                        <UploadCloud className={`h-12 w-12 transition-colors ${isDragging ? 'text-emerald-300' : 'text-emerald-500/70'}`} />
                                     </div>
-                                    <p className="text-lg font-semibold text-slate-200 mb-2">
-                                        {isDragging ? 'Release to upload' : 'Drop video feed here'}
+                                    <p className="text-xl font-medium text-white mb-2">
+                                        {isDragging ? 'Release to encrypt & upload' : 'Drag & drop drone footage here'}
                                     </p>
-                                    <p className="text-sm text-forest-400 mb-4">or click to browse files</p>
+                                    <p className="text-sm text-emerald-100/50 mb-6">or click to browse your encrypted drives</p>
+
                                     <div className="flex flex-wrap gap-2 justify-center">
                                         {['MP4', 'WebM', 'AVI', 'MOV'].map(f => (
-                                            <span key={f} className="badge badge-gray text-[10px] uppercase tracking-wider">{f}</span>
+                                            <span key={f} className="px-3 py-1 bg-black/30 border border-white/5 rounded-full text-[10px] uppercase font-bold tracking-widest text-emerald-400/70">{f}</span>
                                         ))}
                                     </div>
-                                    <p className="text-xs text-forest-500 mt-3">Max {MAX_SIZE_MB}MB per file</p>
+                                    <p className="text-xs text-white/30 mt-6 font-mono">MAX_PAYLOAD: {MAX_SIZE_MB}MB</p>
 
                                     {errorMsg && (
-                                        <div className="mt-4 flex items-center gap-2 text-alert-400 text-xs bg-alert-950/50 border border-alert-800/50 rounded-lg px-3 py-2">
+                                        <div className="absolute bottom-4 mx-auto flex items-center gap-2 text-red-400 text-xs bg-red-950/50 border border-red-800/50 rounded-full px-4 py-2">
                                             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                                             {errorMsg}
                                         </div>
                                     )}
                                 </div>
                             ) : (
-                                /* Preview area */
-                                <div className="glass-panel rounded-2xl overflow-hidden">
-                                    <div className="relative bg-black aspect-video flex items-center justify-center">
+                                <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-md shadow-2xl">
+                                    <div className="relative bg-[#020804] aspect-video flex items-center justify-center border-b border-white/10">
                                         <video
                                             src={previewUrl}
-                                            className="max-h-full max-w-full object-contain"
+                                            className="h-full w-full object-contain"
                                             controls
                                         />
                                         {!uploading && (
                                             <button
                                                 type="button"
                                                 onClick={clearSelection}
-                                                className="absolute top-3 right-3 p-1.5 bg-alert-900/80 hover:bg-alert-700 text-white rounded-full border border-alert-600/50 backdrop-blur-sm transition-colors"
+                                                className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/80 text-white/70 hover:text-white rounded-full border border-white/10 backdrop-blur-md transition-all hover:scale-105"
                                             >
-                                                <X size={14} />
+                                                <X size={16} />
                                             </button>
                                         )}
                                         {uploading && (
-                                            <div className="absolute inset-0 bg-forest-950/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-10">
-                                                <div className="h-12 w-12 border-4 border-forest-800 border-t-forest-400 rounded-full animate-spin" />
-                                                <p className="text-forest-300 font-medium text-sm animate-pulse">
-                                                    Encrypting & transmitting...
-                                                </p>
+                                            <div className="absolute inset-0 bg-[#06140b]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-6 z-10">
+                                                <div className="relative w-16 h-16">
+                                                    <div className="absolute inset-0 border-4 border-emerald-900 rounded-full"></div>
+                                                    <div className="absolute inset-0 border-4 border-transparent border-t-emerald-400 rounded-full animate-spin"></div>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-emerald-400 font-mono text-sm tracking-wider uppercase mb-2 animate-pulse">Running Neural Analysis...</p>
+                                                    <p className="text-emerald-100/50 text-xs font-mono">{progress}% COMPLETED</p>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* File metadata + upload button */}
-                                    <div className="p-4 flex items-center gap-4 bg-forest-900">
-                                        <FileVideo className="h-8 w-8 text-forest-400 shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-slate-200 truncate">{file.name}</p>
-                                            <p className="text-xs text-forest-400">{formatFileSize(file.size)}</p>
+                                    <div className="p-6 flex items-center gap-5 bg-black/20">
+                                        <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                            <FileVideo className="h-6 w-6 text-emerald-400 shrink-0" />
                                         </div>
-                                        <Button type="submit" disabled={uploading} loading={uploading} className="shrink-0">
-                                            <UploadCloud className="h-4 w-4" />
-                                            {uploading ? 'Transmitting...' : 'Initiate Scan'}
-                                        </Button>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-white truncate">{file.name}</p>
+                                            <p className="text-xs text-emerald-400/70 font-mono mt-1">{formatFileSize(file.size)}</p>
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={uploading}
+                                            className={`px-6 py-3 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] flex items-center gap-2 ${uploading ? 'bg-emerald-800 text-emerald-400/50 cursor-not-allowed hidden' : 'bg-emerald-500 hover:bg-emerald-400 text-[#020804] hover:scale-105 hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]'}`}
+                                        >
+                                            <Activity className="w-4 h-4" />
+                                            Start YOLOv8 Scan
+                                        </button>
                                     </div>
 
-                                    {/* Progress bar */}
                                     {uploading && (
-                                        <div className="px-4 pb-4 bg-forest-900">
-                                            <div className="flex justify-between text-xs text-forest-400 mb-1">
-                                                <span>Upload progress</span>
-                                                <span>{progress}%</span>
-                                            </div>
-                                            <div className="h-1.5 bg-forest-800 rounded-full overflow-hidden">
+                                        <div className="px-6 pb-6 bg-black/20">
+                                            <div className="h-1.5 bg-black/50 rounded-full overflow-hidden border border-white/5">
                                                 <div
-                                                    className="h-full bg-gradient-to-r from-forest-600 to-forest-400 rounded-full transition-all duration-300"
+                                                    className="h-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-green-300 rounded-full transition-all duration-300 relative"
                                                     style={{ width: `${progress}%` }}
-                                                />
+                                                >
+                                                    <div className="absolute inset-0 bg-white/20 w-1/2 rounded-full blur-[2px] right-0 translate-x-1/2"></div>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -225,63 +233,69 @@ export default function UploadVideo() {
                             )}
 
                             {!file && !uploading && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <UploadCloud className="h-4 w-4" />
-                                    Browse Files
-                                </Button>
+                                <div className="mt-6 flex justify-center">
+                                    <button
+                                        type="button"
+                                        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-medium text-emerald-100/70 hover:text-white transition-all backdrop-blur-md flex items-center gap-2"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <UploadCloud className="h-4 w-4" />
+                                        Manual Selection
+                                    </button>
+                                </div>
                             )}
                         </form>
                     </div>
 
-                    {/* Info Panel (right 2 cols) */}
-                    <div className="lg:col-span-2 space-y-4">
-                        <div className="glass-panel rounded-xl p-5 space-y-4">
-                            <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                                <Gauge className="h-4 w-4 text-forest-400" />
-                                Detection Capabilities
+                    {/* Right: Info Panel (1 column) */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl p-6 relative overflow-hidden group">
+                            <div className="absolute -inset-24 bg-gradient-to-br from-emerald-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl z-0"></div>
+
+                            <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-6 tracking-wide uppercase relative z-10">
+                                <Target className="h-4 w-4 text-emerald-400" />
+                                Inference Model
                             </h3>
-                            <div className="space-y-3">
+
+                            <div className="space-y-5 relative z-10">
                                 {[
-                                    { label: 'Poacher Detection', desc: 'Human presence in restricted zones', color: 'text-alert-400' },
-                                    { label: 'Weapon Identification', desc: 'Firearms, traps & snares detection', color: 'text-alert-400' },
-                                    { label: 'Wildlife Tracking', desc: 'Animal species identification', color: 'text-forest-400' },
-                                    { label: 'Vehicle Detection', desc: 'Unauthorized vehicle tracking', color: 'text-amber-400' },
-                                ].map(({ label, desc, color }) => (
-                                    <div key={label} className="flex gap-3">
-                                        <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${color}`} />
+                                    { label: 'Poacher Detection', desc: 'Identifies unauthorized human presence', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+                                    { label: 'Weapon Identification', desc: 'Rifles, snares & traps', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
+                                    { label: 'Wildlife Tracking', desc: 'Species cataloging & counting', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+                                    { label: 'Ranger Recognition', desc: 'Friendly personnel identification', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+                                ].map(({ label, desc, color, bg, border }) => (
+                                    <div key={label} className="flex gap-4 items-start">
+                                        <div className={`p-2 rounded-lg ${bg} ${border} border`}>
+                                            <CheckCircle2 className={`h-4 w-4 ${color}`} />
+                                        </div>
                                         <div>
-                                            <p className="text-sm font-medium text-slate-200">{label}</p>
-                                            <p className="text-xs text-forest-400">{desc}</p>
+                                            <p className="text-sm font-medium text-white mb-0.5">{label}</p>
+                                            <p className="text-xs text-emerald-100/50 leading-relaxed">{desc}</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="glass-panel rounded-xl p-5 space-y-3">
-                            <h3 className="text-sm font-semibold text-slate-200">Processing Pipeline</h3>
-                            <ol className="space-y-2">
+                        <div className="bg-black/20 border border-emerald-900/30 rounded-3xl p-6">
+                            <h3 className="text-xs font-mono tracking-widest text-emerald-400/50 uppercase mb-4">Pipeline Status</h3>
+                            <div className="relative before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-emerald-500/20 before:to-transparent">
                                 {[
-                                    'Video uploaded & encrypted',
-                                    'Frame extraction & preprocessing',
-                                    'YOLOv8 detection model inference',
-                                    'Threat classification & scoring',
-                                    'Alert triggered if threats found',
-                                    'Results stored & indexed',
+                                    'Secure Upload',
+                                    'Frame Extraction',
+                                    'YOLOv8 Inference',
+                                    'Alert Dispatch',
                                 ].map((step, i) => (
-                                    <li key={i} className="flex items-start gap-3 text-xs text-forest-400">
-                                        <span className="shrink-0 h-4.5 w-4.5 rounded-full bg-forest-800 border border-forest-700 flex items-center justify-center text-[10px] font-bold text-forest-300">
+                                    <div key={i} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active mb-6 last:mb-0">
+                                        <div className="flex items-center justify-center w-6 h-6 rounded-full border border-emerald-500/30 bg-black text-emerald-400/50 group-hover:text-emerald-400 group-hover:border-emerald-400 shadow-[0_0_0_4px_rgba(6,20,11,1)] z-10 font-mono text-[10px] transition-colors">
                                             {i + 1}
-                                        </span>
-                                        {step}
-                                    </li>
+                                        </div>
+                                        <div className="w-[calc(100%-3rem)] text-xs text-emerald-100/40 group-hover:text-emerald-100/80 transition-colors ml-4 font-medium uppercase tracking-wider">
+                                            {step}
+                                        </div>
+                                    </div>
                                 ))}
-                            </ol>
+                            </div>
                         </div>
                     </div>
                 </div>

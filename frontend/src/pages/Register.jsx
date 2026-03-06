@@ -22,7 +22,15 @@ export default function Register() {
             await register(email, password, fullName);
             navigate('/');
         } catch (err) {
-            setError(err.response?.data?.detail || 'Registration failed. Check clearance levels.');
+            let errorMsg = 'Registration failed. Check clearance levels.';
+            if (err.response?.data?.detail) {
+                if (Array.isArray(err.response.data.detail)) {
+                    errorMsg = err.response.data.detail[0].msg;
+                } else {
+                    errorMsg = err.response.data.detail;
+                }
+            }
+            setError(errorMsg);
         } finally {
             setLoading(false);
         }
