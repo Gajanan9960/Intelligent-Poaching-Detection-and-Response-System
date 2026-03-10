@@ -8,6 +8,11 @@ async def send_email(
     body: str,
     attachments: list[dict] = None  # [{"filename": "x.jpg", "content": bytes}]
 ) -> None:
+    # Guard: skip if SMTP is not configured
+    if not settings.SMTP_HOST:
+        print("Email alert skipped: SMTP_HOST not configured.")
+        return
+
     message = EmailMessage()
     message["From"] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
     message["To"] = recipients
@@ -16,12 +21,13 @@ async def send_email(
 
     if attachments:
         for attachment in attachments:
-            message.add_attachment(
-                attachment["content"],
-                maintype="image",
-                subtype="jpeg",
-                filename=attachment["filename"]
-            )
+            if attachment.get("content"):
+                message.add_attachment(
+                    attachment["content"],
+                    maintype="image",
+                    subtype="jpeg",
+                    filename=attachment["filename"]
+                )
 
     smtp = aiosmtplib.SMTP(
         hostname=settings.SMTP_HOST,
@@ -31,8 +37,8 @@ async def send_email(
     )
     
     try:
-        if settings.SMTP_USER:
-            await smtp.connect()
+        await smtp.connect()
+        if settings.SMTP_USER and settings.SMTP_PASSWORD:
             await smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         
         await smtp.send_message(message)
@@ -41,5 +47,6 @@ async def send_email(
     finally:
         try:
             await smtp.quit()
-        except:
+        except Exception:
             pass
+

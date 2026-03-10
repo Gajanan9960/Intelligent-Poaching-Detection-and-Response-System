@@ -13,6 +13,7 @@ async def lifespan(app: FastAPI):
     # Ensure static directories exist
     os.makedirs("backend/static/videos", exist_ok=True)
     os.makedirs("backend/static/images", exist_ok=True)
+    os.makedirs("backend/static/uploads", exist_ok=True)
     yield
     # Shutdown
     await close_mongo_connection()

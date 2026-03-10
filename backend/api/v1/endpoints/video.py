@@ -14,6 +14,9 @@ from backend.core.config import settings
 
 router = APIRouter()
 
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"}
+MAX_UPLOAD_SIZE_MB = 50
+
 # Lazy-load detector to avoid blocking startup if model isn't available
 _detector = None
 
@@ -29,7 +32,7 @@ def get_detector():
     return _detector
 
 
-async def process_video_task(video_id: str, file_path: str, user_email: str):
+async def process_image_task(video_id: str, file_path: str, user_email: str):
     db = get_database()
     await db.videos.update_one({"_id": video_id}, {"$set": {"status": VideoStatus.processing}})
     
@@ -43,49 +46,38 @@ async def process_video_task(video_id: str, file_path: str, user_email: str):
     
     def run_detection_sync():
         detections_found = []
-        cap = cv2.VideoCapture(file_path)
-        frame_count = 0
-        while cap.isOpened():
-            success, frame = cap.read()
-            if not success:
-                break
-            
-            # Process every 5th frame to reduce load
-            frame_count += 1
-            if frame_count % 5 != 0:
-                continue
+        frame = cv2.imread(file_path)
+        if frame is None:
+            print(f"Could not read image: {file_path}")
+            return detections_found
+        
+        results = detector.model(frame, verbose=False)
+        for r in results:
+            for box in r.boxes:
+                c = int(box.cls)
+                label = detector.model.names[c]
+                conf = float(box.conf)
                 
-            results = detector.model(frame, verbose=False)
-            for r in results:
-                for box in r.boxes:
-                    c = int(box.cls)
-                    label = detector.model.names[c]
-                    conf = float(box.conf)
-                    detected_class = None
-                    if label == 'person':
-                        detected_class = 'poacher'
-                    elif c in detector.target_classes and label != 'person':
-                        detected_class = 'animal'
+                # Use the detector's classify_detection method
+                detected_class = detector.classify_detection(c, label)
+                
+                if detected_class:
+                    timestamp = datetime.now()
+                    # Save annotated frame for all detections
+                    frame_filename = f"{uuid4()}.jpg"
+                    img_dir = os.path.join("backend", "static", "images")
+                    os.makedirs(img_dir, exist_ok=True)
+                    img_path = os.path.join(img_dir, frame_filename)
+                    cv2.imwrite(img_path, frame)
+                    image_url = f"/static/images/{frame_filename}"
                     
-                    if detected_class:
-                        timestamp = datetime.now()
-                        image_url = None
-                        if detected_class in ["poacher", "weapon"]:
-                            frame_filename = f"{uuid4()}.jpg"
-                            img_dir = os.path.join("backend", "static", "images")
-                            os.makedirs(img_dir, exist_ok=True)
-                            img_path = os.path.join(img_dir, frame_filename)
-                            cv2.imwrite(img_path, frame)
-                            image_url = f"/static/images/{frame_filename}"
-                        
-                        detections_found.append({
-                            "video_id": video_id,
-                            "timestamp": timestamp,
-                            "detected_class": detected_class,
-                            "confidence": conf,
-                            "image_url": image_url
-                        })
-        cap.release()
+                    detections_found.append({
+                        "video_id": video_id,
+                        "timestamp": timestamp,
+                        "detected_class": detected_class,
+                        "confidence": conf,
+                        "image_url": image_url
+                    })
         return detections_found
 
     try:
@@ -119,43 +111,83 @@ async def process_video_task(video_id: str, file_path: str, user_email: str):
 
         await db.videos.update_one({"_id": video_id}, {"$set": {"status": VideoStatus.completed}})
     except Exception as e:
-        print(f"Video processing failed for {video_id}: {e}")
+        print(f"Image processing failed for {video_id}: {e}")
         await db.videos.update_one({"_id": video_id}, {"$set": {"status": VideoStatus.failed}})
 
 
 @router.post("/upload")
-async def upload_video(
+async def upload_image(
     file: UploadFile = File(...),
-    background_tasks: BackgroundTasks = None,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(deps.get_current_user)
 ):
+    # ─── Validate file type ─────────────────────────────
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type '{file.content_type}'. Allowed: JPG, PNG, WebP, BMP, TIFF."
+        )
+
     video_id = str(uuid4())
-    secure_name = os.path.basename(file.filename).replace(" ", "_").replace("/", "").replace("\\", "")
+    # Sanitize filename — strip directory components and dangerous characters
+    raw_name = os.path.basename(file.filename or "upload.jpg")
+    secure_name = "".join(c for c in raw_name if c.isalnum() or c in "._-").strip()
+    if not secure_name:
+        secure_name = "upload.jpg"
     
     # Ensure upload directory exists
-    video_dir = os.path.join("backend", "static", "videos")
-    os.makedirs(video_dir, exist_ok=True)
+    upload_dir = os.path.join("backend", "static", "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
     
-    file_location = os.path.join(video_dir, f"{video_id}_{secure_name}")
+    file_location = os.path.join(upload_dir, f"{video_id}_{secure_name}")
     
-    async with aiofiles.open(file_location, 'wb') as out_file:
-        while content := await file.read(1024 * 1024):
-            await out_file.write(content)
+    # ─── Stream file to disk with size check ────────────
+    max_bytes = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    total_written = 0
+    try:
+        async with aiofiles.open(file_location, 'wb') as out_file:
+            while content := await file.read(1024 * 1024):
+                total_written += len(content)
+                if total_written > max_bytes:
+                    # Clean up oversized file
+                    await out_file.close()
+                    os.remove(file_location)
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File too large. Maximum allowed size is {MAX_UPLOAD_SIZE_MB}MB."
+                    )
+                await out_file.write(content)
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Clean up on write failure
+        if os.path.exists(file_location):
+            os.remove(file_location)
+        raise HTTPException(status_code=500, detail="Failed to save uploaded file.")
     
     db = get_database()
+    image_url = f"/static/uploads/{video_id}_{secure_name}"
     video_doc = {
         "_id": video_id,
         "filename": file.filename,
         "user_id": current_user.id,
         "uploaded_at": datetime.now(),
         "status": VideoStatus.pending,
-        "file_path": file_location
+        "file_path": file_location,
+        "image_url": image_url
     }
-    await db.videos.insert_one(video_doc)
     
-    background_tasks.add_task(process_video_task, video_id, file_location, current_user.email)
+    try:
+        await db.videos.insert_one(video_doc)
+    except Exception as e:
+        # Clean up file if DB insert fails
+        if os.path.exists(file_location):
+            os.remove(file_location)
+        raise HTTPException(status_code=500, detail="Failed to register upload in database.")
     
-    return {"id": video_id, "status": "pending", "message": "Video uploaded and processing started"}
+    background_tasks.add_task(process_image_task, video_id, file_location, current_user.email)
+    
+    return {"id": video_id, "status": "pending", "message": "Image uploaded and analysis started"}
 
 @router.get("/list")
 async def list_videos(

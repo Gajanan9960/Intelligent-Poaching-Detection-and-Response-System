@@ -6,8 +6,8 @@ import { Input } from '../components/common/Input';
 import { Button } from '../components/common/Button';
 
 export default function Login() {
-    const [email, setEmail] = useState('admin@guardian.io');
-    const [password, setPassword] = useState('password123');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
     const [error, setError] = useState('');
@@ -19,9 +19,10 @@ export default function Login() {
         setLoading(true);
         try {
             await login(email, password);
-            navigate('/');
+            navigate('/dashboard');
         } catch (err) {
-            setError('Invalid credentials or unauthorized access.');
+            const detail = err?.response?.data?.detail;
+            setError(detail || 'Invalid credentials or server unreachable.');
         } finally {
             setLoading(false);
         }

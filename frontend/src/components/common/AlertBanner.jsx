@@ -8,10 +8,10 @@ import { AlertTriangle, Shield, Info, X, Mail } from 'lucide-react';
 export function AlertBanner({ type = 'info', title, message, emailSent, onDismiss, className = '' }) {
     const config = {
         critical: {
-            wrapper: 'alert-banner-critical',
-            icon: <AlertTriangle className="h-5 w-5 text-alert-400 shrink-0 mt-0.5" />,
-            titleClass: 'text-alert-300 font-semibold',
-            msgClass: 'text-alert-200/80',
+            wrapper: 'bg-alert-950/60 border-2 border-alert-500 rounded-xl p-5 flex items-start gap-4 shadow-[0_0_30px_rgba(239,68,68,0.4)] relative overflow-hidden',
+            icon: <div className="p-2 bg-alert-500/20 rounded-full animate-pulse"><AlertTriangle className="h-8 w-8 text-alert-500 shrink-0" /></div>,
+            titleClass: 'text-white font-black tracking-widest text-lg uppercase drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]',
+            msgClass: 'text-alert-100/90 font-medium text-sm mt-1',
         },
         warning: {
             wrapper: 'alert-banner-warning',

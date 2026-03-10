@@ -9,16 +9,16 @@ import { cn } from '../common/Input';
 
 const navigation = [
     {
-        name: 'Command Center',
-        href: '/',
+        name: 'Dashboard',
+        href: '/dashboard',
         icon: LayoutDashboard,
-        description: 'Dashboard & Overview',
+        description: 'Overview & Analytics',
     },
     {
-        name: 'Upload Footage',
+        name: 'Upload Image',
         href: '/upload',
         icon: Upload,
-        description: 'Submit surveillance video',
+        description: 'Submit surveillance photo',
     },
     {
         name: 'Detection Results',
@@ -52,8 +52,7 @@ export default function Sidebar({ collapsed, onToggle }) {
 
     // Whether this route is the active one
     const isActive = (href) => {
-        if (href === '/') return location.pathname === '/';
-        return location.pathname.startsWith(href);
+        return location.pathname === href || location.pathname.startsWith(href + '/');
     };
 
     const initials = user?.full_name

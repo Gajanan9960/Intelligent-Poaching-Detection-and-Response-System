@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ShieldCheck, Video, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Activity, ShieldCheck, ImageIcon, ArrowRight, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Landing() {
@@ -27,7 +27,7 @@ export default function Landing() {
                                 Sign In
                             </Link>
                             <Link to="/upload" className="px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-full transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]">
-                                Upload Video
+                                Upload Image
                             </Link>
                         </>
                     ) : (
@@ -53,13 +53,13 @@ export default function Landing() {
                 </h1>
 
                 <p className="text-lg md:text-xl text-emerald-50/70 mb-10 max-w-2xl mx-auto leading-relaxed stagger-children">
-                    Protecting wildlife through advanced YOLOv8 surveillance. Upload drone and trail camera footage for real-time analysis, alerting authorities before it's too late.
+                    Protecting wildlife through advanced YOLOv8 surveillance. Upload field camera photos for real-time analysis, alerting authorities before it's too late.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 stagger-children">
                     <Link to="/upload" className="group flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-semibold transition-all hover:scale-105 shadow-[0_0_30px_rgba(5,150,105,0.4)]">
-                        <Video className="w-5 h-5" />
-                        Upload Surveillance Video
+                        <ImageIcon className="w-5 h-5" />
+                        Upload Surveillance Image
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
                     <Link to="/dashboard" className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold text-white backdrop-blur-md transition-all">
@@ -72,7 +72,7 @@ export default function Landing() {
                     {[
                         { title: "Real-time YOLOv8 Analysis", desc: "Instantly detect poachers, weapons, and vehicles with high accuracy using deep learning.", icon: <Activity className="w-6 h-6 text-emerald-400" /> },
                         { title: "Automated Alerts", desc: "Immediate email notifications to nearest forest stations when suspicious activity is flagged.", icon: <ShieldCheck className="w-6 h-6 text-emerald-400" /> },
-                        { title: "Wildlife Monitoring", desc: "Track and catalog elephant and tiger movements to better understand migration patterns.", icon: <Video className="w-6 h-6 text-emerald-400" /> },
+                        { title: "Wildlife Monitoring", desc: "Track and catalog elephant and tiger movements to better understand migration patterns.", icon: <ImageIcon className="w-6 h-6 text-emerald-400" /> },
                     ].map((f, i) => (
                         <div key={i} className="glass-panel p-6 rounded-2xl text-left border border-white/10 hover:border-emerald-500/30 transition-colors card-hover">
                             <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">

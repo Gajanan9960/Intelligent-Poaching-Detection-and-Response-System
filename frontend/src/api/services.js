@@ -28,17 +28,17 @@ export const authService = {
         api.post('/users/', { email, password, full_name: fullName }),
 };
 
-// ─── Video Services ────────────────────────────────────────
+// ─── Image Services ────────────────────────────────────────
 export const videoService = {
-    /** List all uploaded videos for current user */
+    /** List all uploaded images for current user */
     list: () => api.get('/video/list'),
 
-    /** Get a single video by ID */
+    /** Get a single image by ID */
     getById: (id) => api.get(`/video/${id}`),
 
     /**
-     * Upload a video file for detection processing.
-     * @param {File} file - video file to upload
+     * Upload an image file for detection processing.
+     * @param {File} file - image file to upload
      * @param {Function} onProgress - optional progress callback (0-100)
      */
     upload: (file, onProgress) => {

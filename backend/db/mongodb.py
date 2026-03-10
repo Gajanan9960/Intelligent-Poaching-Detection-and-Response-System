@@ -14,7 +14,7 @@ async def connect_to_mongo():
     # Create indexes
     await db.db.users.create_index("email", unique=True)
     
-    print(f"Connected to MongoDB at {settings.MONGODB_URL}")
+    print(f"Connected to MongoDB: {settings.DATABASE_NAME}")
 
 async def close_mongo_connection():
     if db.client:
