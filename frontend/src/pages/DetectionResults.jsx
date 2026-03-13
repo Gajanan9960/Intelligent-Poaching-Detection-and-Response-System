@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/common/Button';
 import { StatusBadge, ThreatBadge } from '../components/common/Badge';
 import { useVideos } from '../hooks/useVideos';
 import {
-    ArrowLeft, ImageIcon, Crosshair, Clock, ChevronRight,
+    ArrowLeft, ImageIcon, Crosshair, Target, Clock, ChevronRight,
     AlertTriangle, Shield, Eye, Camera, Maximize, AlertOctagon
 } from 'lucide-react';
 
@@ -14,7 +14,37 @@ import {
  */
 export default function DetectionResults() {
     const { id } = useParams();
+    const location = useLocation();
     const { videos, loading, error } = useVideos(0);
+    
+    // Check for ?filter=... in the URL
+    const searchParams = new URLSearchParams(location.search);
+    const initialFilter = searchParams.get('filter') || 'All';
+    const [filterClass, setFilterClass] = useState(initialFilter);
+
+    // If the URL changes while we are on the page, update the filter
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const filter = params.get('filter') || 'All';
+        setFilterClass(filter);
+    }, [location.search]);
+
+    const availableClasses = useMemo(() => {
+        const classes = new Set();
+        videos.forEach(v => {
+            v.detections?.forEach(d => {
+                if (d.detected_class) classes.add(d.detected_class);
+            });
+        });
+        return ['All', ...Array.from(classes).sort()];
+    }, [videos]);
+
+    const filteredVideos = useMemo(() => {
+        if (filterClass === 'All') return videos;
+        return videos.filter(v => 
+            v.detections?.some(d => d.detected_class === filterClass)
+        );
+    }, [videos, filterClass]);
 
     const selectedVideo = id ? videos.find(v => (v._id || v.id) === id) : null;
 
@@ -66,6 +96,31 @@ export default function DetectionResults() {
                     </div>
                 )}
 
+                {/* ─── Filter UI ─── */}
+                {!loading && videos.length > 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md gap-4">
+                        <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0 custom-scrollbar">
+                            <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wider shrink-0">Filter Threat:</span>
+                            <div className="flex gap-2">
+                                {availableClasses.map(cls => (
+                                    <button
+                                        key={cls}
+                                        onClick={() => setFilterClass(cls)}
+                                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${filterClass === cls 
+                                            ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(52,211,153,0.4)]' 
+                                            : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10'}`}
+                                    >
+                                        {cls}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="text-sm text-emerald-100/50 font-mono shrink-0 pl-2">
+                            Showing {filteredVideos.length} of {videos.length}
+                        </div>
+                    </div>
+                )}
+
                 {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[1, 2, 3].map(i => (
@@ -83,9 +138,18 @@ export default function DetectionResults() {
                             </button>
                         </Link>
                     </div>
+                ) : filteredVideos.length === 0 ? (
+                    <div className="bg-white/5 border border-white/10 rounded-3xl flex flex-col items-center justify-center p-20 text-emerald-400">
+                        <Target className="h-20 w-20 mb-6 opacity-20" />
+                        <p className="text-xl font-medium text-white mb-2">No Matches Found</p>
+                        <p className="text-emerald-100/50 mb-8 max-w-sm text-center">There are no detections matching the filter "{filterClass}".</p>
+                        <button onClick={() => setFilterClass('All')} className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:scale-105">
+                            Clear Filter
+                        </button>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {videos.map(video => <VideoCard key={video._id || video.id} video={video} />)}
+                        {filteredVideos.map(video => <VideoCard key={video._id || video.id} video={video} />)}
                     </div>
                 )}
             </div>
@@ -110,7 +174,23 @@ function VideoCard({ video }) {
                         <StatusBadge status={video.status} />
                     </div>
 
-                    <h3 className="text-lg font-bold text-white mb-1 truncate">
+                    {/* Image Preview Thumbnail */}
+                    <div className="w-full h-32 mb-4 rounded-xl overflow-hidden bg-black/40 border border-white/5 relative">
+                        {video.image_url ? (
+                            <img 
+                                src={`${import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000'}${video.image_url}`} 
+                                alt={video.filename} 
+                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-emerald-500/20">
+                                <ImageIcon className="h-8 w-8" />
+                            </div>
+                        )}
+                        {hasCritical && <div className="absolute inset-0 ring-2 ring-inset ring-red-500/50 rounded-xl pointer-events-none" />}
+                    </div>
+
+                    <h3 className="text-lg font-bold text-white mb-1 truncate" title={video.filename}>
                         {(video.filename || '').replace(/^[\w-]+_/, '').split('.')[0]}
                     </h3>
                     <p className="text-sm font-mono text-emerald-100/40 mb-6 flex items-center gap-2">
@@ -150,11 +230,8 @@ function VideoDetailView({ video }) {
             <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in text-slate-100">
                 {/* ─── Back Navigation Bar ─── */}
                 <div className="flex items-center gap-4">
-                    <Link to="/dashboard" className="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-400 rounded-full text-emerald-300 hover:text-white text-sm font-medium transition-all flex items-center gap-2 shadow-sm">
-                        <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-                    </Link>
-                    <Link to="/detections" className="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full text-white/70 hover:text-white text-sm font-medium transition-all flex items-center gap-2">
-                        All Results
+                    <Link to="/detections" className="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-400 rounded-full text-emerald-300 hover:text-white text-sm font-medium transition-all flex items-center gap-2 shadow-sm">
+                        <ArrowLeft className="w-4 h-4" /> Back to Detection Results
                     </Link>
                 </div>
 

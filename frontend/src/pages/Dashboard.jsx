@@ -137,6 +137,7 @@ export default function Dashboard() {
                         title={`⚠ THREAT ALERT — ${stats.activeAlerts} incident${stats.activeAlerts > 1 ? 's' : ''} detected`}
                         message="High-confidence detections of poachers or weapons found. Immediate response recommended."
                         emailSent={true}
+                        href="/detections?filter=poacher"
                     />
                 )}
 

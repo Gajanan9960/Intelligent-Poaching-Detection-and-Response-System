@@ -25,7 +25,7 @@ async def create_user(
         )
     
     user_data = jsonable_encoder(user_in)
-    hashed_password = security.get_password_hash(user_in.password)
+    hashed_password = await security.get_password_hash(user_in.password)
     del user_data["password"]
     user_data["hashed_password"] = hashed_password
     

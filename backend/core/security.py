@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Any, Union
+import asyncio
 from jose import jwt
 import bcrypt
 from backend.core.config import settings
@@ -14,8 +15,8 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password using bcrypt directly (avoids passlib compatibility issues)."""
+def _verify_password_sync(plain_password: str, hashed_password: str) -> bool:
+    """Synchronous bcrypt password verification (CPU-bound)."""
     try:
         password_bytes = plain_password.encode('utf-8')
         hashed_bytes = hashed_password.encode('utf-8')
@@ -24,9 +25,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         print(f"Password verification failed: {e}")
         return False
 
-def get_password_hash(password: str) -> str:
-    """Hash password using bcrypt directly."""
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify password using bcrypt in a thread pool to avoid blocking the event loop."""
+    return await asyncio.to_thread(_verify_password_sync, plain_password, hashed_password)
+
+def _get_password_hash_sync(password: str) -> str:
+    """Synchronous bcrypt hashing (CPU-bound)."""
     password_bytes = password.encode('utf-8')
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode('utf-8')
+
+async def get_password_hash(password: str) -> str:
+    """Hash password using bcrypt in a thread pool to avoid blocking the event loop."""
+    return await asyncio.to_thread(_get_password_hash_sync, password)

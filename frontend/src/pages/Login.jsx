@@ -109,9 +109,9 @@ export default function Login() {
                                     <label className="block text-sm font-medium leading-6 text-forest-100">
                                         Access Key
                                     </label>
-                                    <a href="#" className="font-semibold text-xs text-forest-400 hover:text-forest-300">
+                                    <Link to="/forgot-password" className="font-semibold text-xs text-forest-400 hover:text-forest-300">
                                         Forgot access key?
-                                    </a>
+                                    </Link>
                                 </div>
                                 <Input
                                     id="password"

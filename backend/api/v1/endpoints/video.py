@@ -88,7 +88,7 @@ async def process_image_task(video_id: str, file_path: str, user_email: str):
             await db.detections.insert_many(detections)
             
             # Check if we need to send alerts
-            alerts = [d for d in detections if d["detected_class"] in ["poacher", "weapon"]]
+            alerts = [d for d in detections if str(d.get("detected_class", "")).lower() in ["poacher", "weapon"]]
             if alerts:
                 try:
                     from backend.core.email import send_email
@@ -212,10 +212,13 @@ async def list_videos(
     # Fix _id to id for frontend
     results = []
     for v in videos:
-        v["id"] = str(v["_id"])
+        v["id"] = str(v.pop("_id"))
         if "detections" in v:
             for d in v["detections"]:
-                d["id"] = str(d.get("_id", ""))
+                if "_id" in d:
+                    d["id"] = str(d.pop("_id"))
+                if "video_id" in d:
+                    d["video_id"] = str(d["video_id"])
         results.append(v)
         
     return results

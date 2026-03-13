@@ -1,11 +1,13 @@
 import React from 'react';
 import { AlertTriangle, Shield, Info, X, Mail } from 'lucide-react';
 
+import { Link } from 'react-router-dom';
+
 /**
  * AlertBanner - Displays contextual alerts for detection results.
  * type: 'critical' | 'warning' | 'info' | 'success'
  */
-export function AlertBanner({ type = 'info', title, message, emailSent, onDismiss, className = '' }) {
+export function AlertBanner({ type = 'info', title, message, emailSent, onDismiss, className = '', href }) {
     const config = {
         critical: {
             wrapper: 'bg-alert-950/60 border-2 border-alert-500 rounded-xl p-5 flex items-start gap-4 shadow-[0_0_30px_rgba(239,68,68,0.4)] relative overflow-hidden',
@@ -35,8 +37,10 @@ export function AlertBanner({ type = 'info', title, message, emailSent, onDismis
 
     const { wrapper, icon, titleClass, msgClass } = config[type] || config.info;
 
-    return (
-        <div className={`${wrapper} ${className} animate-slide-up`}>
+    const bannerClasses = `${wrapper} ${className} animate-slide-up ${href ? 'cursor-pointer hover:scale-[1.01] transition-transform duration-200' : ''}`;
+
+    const content = (
+        <>
             {icon}
             <div className="flex-1 min-w-0">
                 {title && <p className={`text-sm ${titleClass}`}>{title}</p>}
@@ -48,11 +52,22 @@ export function AlertBanner({ type = 'info', title, message, emailSent, onDismis
                     </p>
                 )}
             </div>
-            {onDismiss && (
-                <button onClick={onDismiss} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1 rounded">
-                    <X className="h-3.5 w-3.5" />
-                </button>
-            )}
+        </>
+    );
+
+    if (href) {
+        return (
+            <Link to={href} className="block w-full">
+                <div className={bannerClasses}>
+                    {content}
+                </div>
+            </Link>
+        );
+    }
+
+    return (
+        <div className={bannerClasses}>
+            {content}
         </div>
     );
 }

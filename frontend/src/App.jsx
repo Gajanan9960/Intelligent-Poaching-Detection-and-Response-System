@@ -13,6 +13,8 @@ import AlertsPage from './pages/AlertsPage';
 import SystemSettings from './pages/SystemSettings';
 import NotFound from './pages/NotFound';
 import Landing from './pages/Landing';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // ─── Protected Route Guard ─────────────────────────────────
 const ProtectedRoute = ({ children }) => {
@@ -59,6 +61,23 @@ function AppRoutes() {
         element={
           <PublicRoute>
             <Register />
+          </PublicRoute>
+        }
+      />
+
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicRoute>
+            <ResetPassword />
           </PublicRoute>
         }
       />

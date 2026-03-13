@@ -249,14 +249,33 @@ export default function UploadVideo() {
                                                 <div key={i} className="relative group rounded-xl overflow-hidden border border-white/10 bg-black/30 aspect-square">
                                                     <img src={f.previewUrl} alt={f.file.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
 
-                                                    {/* Upload status overlay */}
+                                                    {/* Upload/Analysis dynamic scanning overlay */}
                                                     {uploading && prog !== undefined && prog >= 0 && prog < 100 && (
-                                                        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
-                                                            <div className="relative w-10 h-10">
-                                                                <div className="absolute inset-0 border-3 border-emerald-900 rounded-full"></div>
-                                                                <div className="absolute inset-0 border-3 border-transparent border-t-emerald-400 rounded-full animate-spin"></div>
+                                                        <div className="absolute inset-0 bg-emerald-950/80 overflow-hidden flex flex-col items-center justify-center">
+                                                            {/* Radar Background */}
+                                                            <div className="absolute inset-0 opacity-30 pointer-events-none">
+                                                                <div className="absolute inset-0 border-[1px] border-emerald-500/20 rounded-full scale-150"></div>
+                                                                <div className="absolute inset-0 border-[1px] border-emerald-500/30 rounded-full scale-100"></div>
+                                                                <div className="absolute inset-0 border-[1px] border-emerald-500/50 rounded-full scale-50"></div>
+                                                                <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-emerald-500/30"></div>
+                                                                <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-emerald-500/30"></div>
                                                             </div>
-                                                            <span className="text-[10px] text-emerald-300 font-mono mt-2">{prog}%</span>
+                                                            
+                                                            {/* Radar Sweep */}
+                                                            <div className="absolute inset-0 origin-center pointer-events-none" style={{ animation: 'radar-spin 3s linear infinite' }}>
+                                                                <div className="w-1/2 h-1/2 bg-gradient-to-br from-emerald-400/0 via-emerald-400/10 to-emerald-400/40 absolute top-0 right-0 origin-bottom-left rounded-tr-full"></div>
+                                                                <div className="w-1/2 h-full absolute right-0 border-l-[1.5px] border-emerald-400/80"></div>
+                                                            </div>
+
+                                                            {/* Vertical Scan Line */}
+                                                            <div className="absolute left-0 right-0 h-1 bg-emerald-400/80 shadow-[0_0_15px_rgba(52,211,153,1)] z-10" style={{ animation: 'scan-line 2s ease-in-out infinite' }}></div>
+                                                            
+                                                            <div className="relative z-20 bg-black/60 px-3 py-1.5 rounded-full border border-emerald-500/30 backdrop-blur-sm -mt-4">
+                                                                <span className="text-[11px] text-emerald-300 font-mono font-bold tracking-wider animate-pulse flex items-center gap-1.5">
+                                                                    <Target className="w-3 h-3 text-emerald-400 animate-spin-pulse" style={{ animationDuration: '3s' }} /> 
+                                                                    SCANNING {prog}%
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     )}
                                                     {isComplete && (
@@ -298,9 +317,9 @@ export default function UploadVideo() {
                                             disabled={uploading || files.length === 0}
                                             className={`flex-1 px-6 py-4 rounded-2xl font-semibold transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] flex items-center justify-center gap-3 ${uploading ? 'bg-emerald-800 text-emerald-400/50 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-400 text-[#020804] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]'}`}
                                         >
-                                            <Activity className="w-5 h-5" />
+                                            <Activity className={`w-5 h-5 ${uploading ? 'animate-pulse text-emerald-400' : ''}`} />
                                             {uploading
-                                                ? `Analyzing... ${overallProgress}%`
+                                                ? <span className="flex items-center gap-2">Analyzing Target<span className="flex space-x-1"><span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span><span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span><span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span></span> {overallProgress}%</span>
                                                 : `Start YOLOv8 Scan — ${files.length} image${files.length !== 1 ? 's' : ''}`
                                             }
                                         </button>

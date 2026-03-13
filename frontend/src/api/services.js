@@ -26,6 +26,14 @@ export const authService = {
     /** Register a new user */
     register: (email, password, fullName) =>
         api.post('/users/', { email, password, full_name: fullName }),
+
+    /** Request a password reset link */
+    forgotPassword: (email) =>
+        api.post('/forgot-password', { email }),
+
+    /** Reset password using the token from the email */
+    resetPassword: (token, newPassword) =>
+        api.post('/reset-password', { token, new_password: newPassword }),
 };
 
 // ─── Image Services ────────────────────────────────────────
