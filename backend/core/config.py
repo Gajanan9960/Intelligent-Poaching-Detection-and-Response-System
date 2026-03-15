@@ -34,19 +34,17 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     # Database
-    MONGODB_URL: str
+    MONGO_URI: str
     DATABASE_NAME: str = "poaching_detection_db"
 
     # JWT
-    SECRET_KEY: str
+    JWT_SECRET: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    # Email — all optional with defaults so backend starts even without SMTP config
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
+    EMAIL_ADDRESS: str = ""
+    EMAIL_APP_PASSWORD: str = ""
+    OFFICER_EMAIL: str = ""
     EMAILS_FROM_EMAIL: str = "alerts@poachingdetection.com"
     EMAILS_FROM_NAME: str = "Poaching Detection Alert"
 

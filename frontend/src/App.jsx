@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import UploadVideo from './pages/UploadVideo';
 import DetectionResults from './pages/DetectionResults';
 import AlertsPage from './pages/AlertsPage';
+import OfficerDashboard from './pages/OfficerDashboard';
 import SystemSettings from './pages/SystemSettings';
 import NotFound from './pages/NotFound';
 import Landing from './pages/Landing';
@@ -88,6 +89,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/officer-dashboard"
+        element={
+          <ProtectedRoute>
+            <OfficerDashboard />
           </ProtectedRoute>
         }
       />

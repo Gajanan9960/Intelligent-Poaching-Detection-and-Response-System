@@ -6,10 +6,14 @@ from fastapi.staticfiles import StaticFiles
 from backend.core.config import settings
 from backend.db.mongodb import connect_to_mongo, close_mongo_connection
 
+from backend.services.detection_service import detection_service
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await connect_to_mongo()
+    # LOAD YOLO ONCE AT STARTUP
+    detection_service.load_model()
     # Ensure static directories exist
     os.makedirs("backend/static/videos", exist_ok=True)
     os.makedirs("backend/static/images", exist_ok=True)

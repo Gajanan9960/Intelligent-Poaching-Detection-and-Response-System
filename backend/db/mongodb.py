@@ -8,7 +8,7 @@ class MongoDB:
 db = MongoDB()
 
 async def connect_to_mongo():
-    db.client = AsyncIOMotorClient(settings.MONGODB_URL)
+    db.client = AsyncIOMotorClient(settings.MONGO_URI)
     db.db = db.client[settings.DATABASE_NAME]
     
     # Create indexes

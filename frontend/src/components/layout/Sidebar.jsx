@@ -15,6 +15,12 @@ const navigation = [
         description: 'Overview & Analytics',
     },
     {
+        name: 'Officer Dashboard',
+        href: '/officer-dashboard',
+        icon: ShieldAlert,
+        description: 'Critical Alert Command Center',
+    },
+    {
         name: 'Upload Image',
         href: '/upload',
         icon: Upload,
@@ -87,7 +93,14 @@ export default function Sidebar({ collapsed, onToggle }) {
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-                {navigation.map((item) => {
+                {navigation.filter(item => {
+                    const role = user?.role || 'ranger';
+                    if (role === 'admin') return true;
+                    if (role === 'officer' && item.name === 'Upload Image') return false;
+                    if (role === 'ranger' && item.name === 'Officer Dashboard') return false;
+                    if (role === 'ranger' && item.name === 'Active Alerts') return false;
+                    return true;
+                }).map((item) => {
                     const active = isActive(item.href);
                     return (
                         <Link
@@ -137,6 +150,9 @@ export default function Sidebar({ collapsed, onToggle }) {
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-white truncate leading-none">
                                 {user?.full_name || 'Field Agent'}
+                            </p>
+                            <p className="text-[10px] font-bold tracking-wider uppercase text-forest-300 mt-1 mb-0.5 leading-none">
+                                {user?.role || 'RANGER'}
                             </p>
                             <p className="text-xs text-forest-400 truncate mt-0.5 leading-none">
                                 {user?.email || ''}

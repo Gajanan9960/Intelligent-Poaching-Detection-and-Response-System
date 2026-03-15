@@ -11,7 +11,7 @@ import {
 
 const MAX_SIZE_MB = 50;
 const MAX_FILES = 20;
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff'];
+const ACCEPTED_TYPES = ['video/mp4', 'video/x-msvideo', 'video/quicktime', 'image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff'];
 
 export default function UploadVideo() {
     const [files, setFiles] = useState([]);        // Array of { file, previewUrl }
@@ -38,7 +38,7 @@ export default function UploadVideo() {
                 break;
             }
             if (!ACCEPTED_TYPES.includes(selected.type)) {
-                errors.push(`"${selected.name}" — invalid type. Only JPG, PNG, WebP, BMP, TIFF.`);
+                errors.push(`"${selected.name}" — invalid type. Only MP4, AVI, MOV, JPG, PNG, WebP.`);
                 continue;
             }
             if (selected.size > MAX_SIZE_MB * 1024 * 1024) {
@@ -196,7 +196,7 @@ export default function UploadVideo() {
                                 <input
                                     type="file"
                                     ref={fileInputRef}
-                                    accept="image/*"
+                                    accept="video/*, image/*"
                                     multiple
                                     className="hidden"
                                     onChange={(e) => validateAndAddFiles([...e.target.files])}
@@ -210,11 +210,11 @@ export default function UploadVideo() {
                                 <p className="text-sm text-emerald-100/50 mb-4">Select multiple images at once • Up to {MAX_FILES} per batch</p>
 
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                    {['JPG', 'PNG', 'WebP', 'BMP'].map(f => (
+                                    {['MP4', 'AVI', 'MOV', 'JPG', 'PNG', 'WebP'].map(f => (
                                         <span key={f} className="px-3 py-1 bg-black/30 border border-white/5 rounded-full text-[10px] uppercase font-bold tracking-widest text-emerald-400/70">{f}</span>
                                     ))}
                                 </div>
-                                <p className="text-xs text-white/30 mt-4 font-mono">MAX_PAYLOAD: {MAX_SIZE_MB}MB per image</p>
+                                <p className="text-xs text-white/30 mt-4 font-mono">MAX_PAYLOAD: {MAX_SIZE_MB}MB per file</p>
 
                                 {errorMsg && !result && (
                                     <div className="absolute bottom-4 mx-auto flex items-center gap-2 text-red-400 text-xs bg-red-950/50 border border-red-800/50 rounded-full px-4 py-2">

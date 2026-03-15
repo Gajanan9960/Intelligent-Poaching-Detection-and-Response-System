@@ -69,18 +69,18 @@ export const videoService = {
 
 // ─── Detection Services ───────────────────────────────────
 export const detectionService = {
-    /** Get all detections for a specific video */
-    getByVideoId: (videoId) => api.get(`/detections/${videoId}`),
-
-    /** Get overall detection statistics */
-    getStats: () => api.get('/detections/stats'),
+    /** Get all system detections */
+    list: () => api.get('/detections/'),
 };
 
 // ─── Alert Services ────────────────────────────────────────
 export const alertService = {
-    /** List active alerts */
+    /** List all alerts */
     list: () => api.get('/alerts/'),
 
-    /** Acknowledge / dismiss an alert */
-    acknowledge: (alertId) => api.patch(`/alerts/${alertId}/acknowledge`),
+    /** Get specific alert */
+    getById: (alertId) => api.get(`/alerts/${alertId}`),
+
+    /** Resolve an alert */
+    resolve: (alertId) => api.put(`/alerts/${alertId}/resolve`),
 };

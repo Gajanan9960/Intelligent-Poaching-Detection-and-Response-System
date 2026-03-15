@@ -25,7 +25,7 @@ def _create_reset_token(email: str) -> str:
 def _decode_reset_token(token: str) -> Optional[str]:
     """Decode a password-reset token, return the email or None."""
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.ALGORITHM])
         return payload.get("sub")
     except JWTError:
         return None

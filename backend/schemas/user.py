@@ -1,9 +1,16 @@
 from typing import Optional
 import re
+from enum import Enum
 from pydantic import BaseModel, EmailStr, validator, Field
+
+class Role(str, Enum):
+    admin = "admin"
+    ranger = "ranger"
+    officer = "officer"
 
 class UserBase(BaseModel):
     email: EmailStr
+    role: Role = Role.ranger
     full_name: Optional[str] = None
     is_active: bool = True
 

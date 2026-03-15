@@ -11,121 +11,25 @@ from backend.schemas.user import User
 from backend.schemas.video import Video, VideoStatus
 from backend.db.mongodb import get_database
 from backend.core.config import settings
+from backend.services.detection_service import detection_service
 
 router = APIRouter()
 
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"}
+ALLOWED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff", "video/mp4", "video/x-msvideo", "video/quicktime"}
 MAX_UPLOAD_SIZE_MB = 50
-
-# Lazy-load detector to avoid blocking startup if model isn't available
-_detector = None
-
-def get_detector():
-    global _detector
-    if _detector is None:
-        try:
-            from model.detector import PoachingDetector
-            _detector = PoachingDetector()
-        except Exception as e:
-            print(f"Warning: Could not load detection model: {e}")
-            _detector = None
-    return _detector
-
-
-async def process_image_task(video_id: str, file_path: str, user_email: str):
-    db = get_database()
-    await db.videos.update_one({"_id": video_id}, {"$set": {"status": VideoStatus.processing}})
-    
-    detector = get_detector()
-    if detector is None:
-        print(f"Skipping detection for {video_id}: model not loaded")
-        await db.videos.update_one({"_id": video_id}, {"$set": {"status": VideoStatus.failed}})
-        return
-
-    loop = asyncio.get_running_loop()
-    
-    def run_detection_sync():
-        detections_found = []
-        frame = cv2.imread(file_path)
-        if frame is None:
-            print(f"Could not read image: {file_path}")
-            return detections_found
-        
-        results = detector.model(frame, verbose=False)
-        for r in results:
-            for box in r.boxes:
-                c = int(box.cls)
-                label = detector.model.names[c]
-                conf = float(box.conf)
-                
-                # Use the detector's classify_detection method
-                detected_class = detector.classify_detection(c, label)
-                
-                if detected_class:
-                    timestamp = datetime.now()
-                    # Save annotated frame for all detections
-                    frame_filename = f"{uuid4()}.jpg"
-                    img_dir = os.path.join("backend", "static", "images")
-                    os.makedirs(img_dir, exist_ok=True)
-                    img_path = os.path.join(img_dir, frame_filename)
-                    cv2.imwrite(img_path, frame)
-                    image_url = f"/static/images/{frame_filename}"
-                    
-                    detections_found.append({
-                        "video_id": video_id,
-                        "timestamp": timestamp,
-                        "detected_class": detected_class,
-                        "confidence": conf,
-                        "image_url": image_url
-                    })
-        return detections_found
-
-    try:
-        detections = await loop.run_in_executor(None, run_detection_sync)
-
-        # Save detections to DB
-        if detections:
-            await db.detections.insert_many(detections)
-            
-            # Check if we need to send alerts
-            alerts = [d for d in detections if str(d.get("detected_class", "")).lower() in ["poacher", "weapon"]]
-            if alerts:
-                try:
-                    from backend.core.email import send_email
-                    first_alert = alerts[0]
-                    image_content = None
-                    if first_alert.get("image_url"):
-                        path = os.path.join("backend", "static", "images", os.path.basename(first_alert["image_url"]))
-                        if os.path.exists(path):
-                            async with aiofiles.open(path, "rb") as f:
-                                image_content = await f.read()
-                    
-                    await send_email(
-                        subject=f"ALERT: {first_alert['detected_class']} Detected!",
-                        recipients=[user_email],
-                        body=f"Detected {len(alerts)} critical instances. First detected {first_alert['detected_class']} with {first_alert['confidence']:.2f} confidence.",
-                        attachments=[{"filename": "alert.jpg", "content": image_content}] if image_content else []
-                    )
-                except Exception as e:
-                    print(f"Email alert failed (non-fatal): {e}")
-
-        await db.videos.update_one({"_id": video_id}, {"$set": {"status": VideoStatus.completed}})
-    except Exception as e:
-        print(f"Image processing failed for {video_id}: {e}")
-        await db.videos.update_one({"_id": video_id}, {"$set": {"status": VideoStatus.failed}})
 
 
 @router.post("/upload")
 async def upload_image(
     file: UploadFile = File(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.RoleChecker(["admin", "ranger"]))
 ):
     # ─── Validate file type ─────────────────────────────
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
+    if file.content_type not in ALLOWED_MEDIA_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type '{file.content_type}'. Allowed: JPG, PNG, WebP, BMP, TIFF."
+            detail=f"Invalid file type '{file.content_type}'. Allowed: MP4, AVI, MOV, JPG, PNG, WebP."
         )
 
     video_id = str(uuid4())
@@ -185,7 +89,7 @@ async def upload_image(
             os.remove(file_location)
         raise HTTPException(status_code=500, detail="Failed to register upload in database.")
     
-    background_tasks.add_task(process_image_task, video_id, file_location, current_user.email)
+    background_tasks.add_task(detection_service.process_video, video_id, file_location)
     
     return {"id": video_id, "status": "pending", "message": "Image uploaded and analysis started"}
 
