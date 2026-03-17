@@ -2,11 +2,11 @@ from datetime import timedelta
 from typing import Any, Optional
 from fastapi import APIRouter, HTTPException
 from jose import jwt, JWTError
-from backend.core import security
-from backend.core.config import settings
-from backend.core.email import send_email
-from backend.db.mongodb import get_database
-from backend.schemas.password_reset import PasswordResetRequest, PasswordReset
+from core import security
+from core.config import settings
+from core.email import send_email
+from db.mongodb import get_database
+from schemas.password_reset import PasswordResetRequest, PasswordReset
 
 router = APIRouter()
 

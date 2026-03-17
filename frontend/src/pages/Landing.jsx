@@ -4,7 +4,9 @@ import { Activity, ShieldCheck, ImageIcon, ArrowRight, LayoutDashboard } from 'l
 import { useAuth } from '../context/AuthContext';
 
 export default function Landing() {
-    const { isAuthenticated, loading } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
+    const dashboardLink = user?.role === 'officer' ? '/officer-dashboard' : '/dashboard';
+
 
     return (
         <div className="min-h-screen bg-[#06140b] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#0a2916] via-[#06140b] to-[#040f08] text-slate-100 flex flex-col font-sans overflow-hidden">
@@ -31,7 +33,7 @@ export default function Landing() {
                             </Link>
                         </>
                     ) : (
-                        <Link to="/dashboard" className="px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-full transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]">
+                        <Link to={dashboardLink} className="px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-full transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]">
                             <LayoutDashboard className="w-4 h-4" /> Go to Dashboard
                         </Link>
                     )}
@@ -62,7 +64,7 @@ export default function Landing() {
                         Upload Surveillance Image
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
-                    <Link to="/dashboard" className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold text-white backdrop-blur-md transition-all">
+                    <Link to={dashboardLink} className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-semibold text-white backdrop-blur-md transition-all">
                         Open Dashboard
                     </Link>
                 </div>

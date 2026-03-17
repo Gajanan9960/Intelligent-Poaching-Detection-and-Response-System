@@ -68,20 +68,26 @@ export function StatusBadge({ status }) {
  */
 export function ThreatBadge({ label }) {
     const normalized = label?.toLowerCase() || '';
+    
+    const displayLabel = normalized === 'weapon' ? 'Weapons' :
+                         normalized === 'animal' ? 'Animal' :
+                         normalized === 'ranger' ? 'Ranger' :
+                         normalized === 'poacher' ? 'poacher' : label;
+
     const isCritical = normalized === 'poacher' || normalized === 'weapon';
-    const isAnimal = ['animal', 'elephant', 'tiger', 'rhino', 'deer', 'wildlife'].some(a => normalized.includes(a));
+    const isAnimal = normalized === 'animal';
 
     if (isCritical) {
         return (
-            <Badge variant="red" className="font-semibold uppercase text-[10px] tracking-wider">
-                ⚠ {label}
+            <Badge variant="red" className="font-semibold text-[10px] tracking-wider">
+                ⚠ {displayLabel}
             </Badge>
         );
     }
     if (isAnimal) {
         return (
-            <Badge variant="green">{label}</Badge>
+            <Badge variant="green">{displayLabel}</Badge>
         );
     }
-    return <Badge variant="blue">{label}</Badge>;
+    return <Badge variant="blue">{displayLabel}</Badge>;
 }

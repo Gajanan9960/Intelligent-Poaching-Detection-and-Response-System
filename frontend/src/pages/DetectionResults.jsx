@@ -15,7 +15,7 @@ import {
 export default function DetectionResults() {
     const { id } = useParams();
     const location = useLocation();
-    const { videos, loading, error } = useVideos(0);
+    const { videos, loading, error, clearAll } = useVideos(0);
     
     // Check for ?filter=... in the URL
     const searchParams = new URLSearchParams(location.search);
@@ -30,10 +30,12 @@ export default function DetectionResults() {
     }, [location.search]);
 
     const availableClasses = useMemo(() => {
-        const classes = new Set();
+        const coreClasses = ['animal', 'poacher', 'weapon', 'ranger'];
+        const classes = new Set(coreClasses);
         videos.forEach(v => {
             v.detections?.forEach(d => {
-                if (d.detected_class) classes.add(d.detected_class);
+                const cls = d.detected_class || d.object_type;
+                if (cls) classes.add(cls);
             });
         });
         return ['All', ...Array.from(classes).sort()];
@@ -42,7 +44,7 @@ export default function DetectionResults() {
     const filteredVideos = useMemo(() => {
         if (filterClass === 'All') return videos;
         return videos.filter(v => 
-            v.detections?.some(d => d.detected_class === filterClass)
+            v.detections?.some(d => (d.detected_class || d.object_type) === filterClass)
         );
     }, [videos, filterClass]);
 
@@ -96,13 +98,31 @@ export default function DetectionResults() {
                     </div>
                 )}
 
+                {/* ─── Clear All Button ─── */}
+                {!loading && videos.length > 0 && (
+                    <div className="flex justify-end mb-4">
+                        <button
+                            onClick={async () => {
+                                if (window.confirm("WARNING: Are you sure you want to permanently delete all detection records? This cannot be undone.")) {
+                                    await clearAll();
+                                }
+                            }}
+                            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-full text-sm font-semibold transition-all border border-red-500/20 hover:border-red-500/40 flex items-center gap-2"
+                        >
+                            <AlertOctagon className="w-4 h-4" /> Clear All Detections
+                        </button>
+                    </div>
+                )}
+
                 {/* ─── Filter UI ─── */}
                 {!loading && videos.length > 0 && (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md gap-4">
                         <div className="flex items-center gap-3 overflow-x-auto pb-2 sm:pb-0 custom-scrollbar">
                             <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wider shrink-0">Filter Threat:</span>
                             <div className="flex gap-2">
-                                {availableClasses.map(cls => (
+                                {availableClasses.map(cls => {
+                                    const displayClass = cls === 'weapon' ? 'Weapons' : cls === 'animal' ? 'Animal' : cls === 'ranger' ? 'Ranger' : cls === 'poacher' ? 'poacher' : cls;
+                                    return (
                                     <button
                                         key={cls}
                                         onClick={() => setFilterClass(cls)}
@@ -110,9 +130,10 @@ export default function DetectionResults() {
                                             ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(52,211,153,0.4)]' 
                                             : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10'}`}
                                     >
-                                        {cls}
+                                        {displayClass}
                                     </button>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                         <div className="text-sm text-emerald-100/50 font-mono shrink-0 pl-2">
@@ -158,7 +179,7 @@ export default function DetectionResults() {
 }
 
 function VideoCard({ video }) {
-    const hasCritical = video.detections?.some(d => ['poacher', 'weapon'].includes(d.detected_class?.toLowerCase()));
+    const hasCritical = video.detections?.some(d => ['poacher', 'weapon'].includes((d.detected_class || d.object_type)?.toLowerCase()));
 
     return (
         <Link to={`/detections/${video._id || video.id}`} className="block group">
@@ -199,7 +220,7 @@ function VideoCard({ video }) {
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-6 min-h-[28px]">
-                        {[...new Set(video.detections?.map(d => d.detected_class) || [])].slice(0, 3).map(cls => (
+                        {[...new Set(video.detections?.map(d => d.detected_class || d.object_type) || [])].slice(0, 3).map(cls => (
                             <ThreatBadge key={cls} label={cls} />
                         ))}
                     </div>
@@ -218,7 +239,7 @@ function VideoCard({ video }) {
 
 // ─── VideoDetailView ──────────────────────────────────────
 function VideoDetailView({ video }) {
-    const hasCritical = video.detections?.some(d => ['poacher', 'weapon'].includes(d.detected_class?.toLowerCase()));
+    const hasCritical = video.detections?.some(d => ['poacher', 'weapon'].includes((d.detected_class || d.object_type)?.toLowerCase()));
     const apiBase = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
     const imageUrl = video.image_url ? `${apiBase}${video.image_url}` : null;
 
@@ -283,7 +304,7 @@ function VideoDetailView({ video }) {
                                     Entities Identified
                                 </h3>
                                 <div className="flex flex-wrap gap-2">
-                                    {[...new Set(video.detections.map(d => d.detected_class))].map(cls => (
+                                    {[...new Set(video.detections.map(d => d.detected_class || d.object_type))].map(cls => (
                                         <ThreatBadge key={cls} label={cls} />
                                     ))}
                                 </div>
@@ -330,8 +351,10 @@ function VideoDetailView({ video }) {
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {video.detections.slice(0, 6).map((det, i) => {
-                                        const isCritical = ['poacher', 'weapon'].includes(det.detected_class?.toLowerCase());
-                                        const detImageUrl = det.image_url ? `${apiBase}${det.image_url}` : null;
+                                        const detClass = det.detected_class || det.object_type;
+                                        const detConf = det.confidence || det.confidence_score;
+                                        const isCritical = ['poacher', 'weapon'].includes(detClass?.toLowerCase());
+                                        const detImageUrl = (det.image_url || det.frame_image_path) ? `${apiBase}${det.image_url || det.frame_image_path}` : null;
 
                                         return (
                                             <div key={i} className={`relative aspect-video rounded-xl bg-black border border-white/10 overflow-hidden group cursor-pointer hover:scale-[1.02] ${isCritical ? 'hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]'} transition-all`}>
@@ -348,7 +371,7 @@ function VideoDetailView({ video }) {
                                                 {/* Bounding Box */}
                                                 <div className="absolute inset-x-8 top-6 bottom-4 border-2 rounded pointer-events-none opacity-80 group-hover:scale-[1.02] transition-transform" style={{ borderColor: isCritical ? '#ef4444' : '#10b981' }}>
                                                     <div className={`absolute -top-4 left-0 px-2 flex items-center gap-1 text-[10px] uppercase font-bold text-white rounded-tr rounded-bl tracking-widest ${isCritical ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                                                        {det.detected_class} {(det.confidence * 100).toFixed(0)}%
+                                                        {detClass} {(detConf * 100).toFixed(0)}%
                                                     </div>
                                                 </div>
 
@@ -405,8 +428,10 @@ function DetectionTimeline({ detections, status }) {
 
             <div className="space-y-6">
                 {detections.map((det, i) => {
-                    const isCritical = ['poacher', 'weapon'].includes(det.detected_class?.toLowerCase());
-                    const confPct = typeof det.confidence === 'number' ? `${(det.confidence * 100).toFixed(0)}%` : det.confidence || '—';
+                    const detClass = det.detected_class || det.object_type;
+                    const detConf = det.confidence || det.confidence_score;
+                    const isCritical = ['poacher', 'weapon'].includes(detClass?.toLowerCase());
+                    const confPct = typeof detConf === 'number' ? `${(detConf * 100).toFixed(0)}%` : detConf || '—';
 
                     return (
                         <div key={i} className="relative flex items-start gap-6 group hover:bg-white/5 p-3 -mx-3 rounded-xl transition-colors cursor-pointer">
@@ -422,9 +447,9 @@ function DetectionTimeline({ detections, status }) {
                                     <div className="flex items-center gap-2">
                                         <span className={`font-mono text-sm px-2 py-0.5 rounded ${isCritical ? 'bg-alert-500/10 text-alert-400' : 'bg-emerald-500/10 text-emerald-400'
                                             }`}>
-                                            {det.timestamp || '00:00:00'}
+                                            {det.timestamp || det.detected_at || '00:00:00'}
                                         </span>
-                                        <ThreatBadge label={det.detected_class} />
+                                        <ThreatBadge label={detClass} />
                                     </div>
                                     <span className="text-xs text-forest-400 font-mono hidden sm:block">
                                         CONF: {confPct}
@@ -432,8 +457,8 @@ function DetectionTimeline({ detections, status }) {
                                 </div>
 
                                 <p className={`text-sm ${isCritical ? 'text-alert-100 font-medium' : 'text-slate-300'}`}>
-                                    {det.detected_class === 'poacher' ? 'Suspicious human signature detected in sector.' :
-                                        det.detected_class === 'weapon' ? 'Weapon signature detected → ALERT SENT' :
+                                    {detClass === 'poacher' ? 'Suspicious human signature detected in sector.' :
+                                        detClass === 'weapon' ? 'Weapon signature detected → ALERT SENT' :
                                             'Wildlife movement registered.'}
                                 </p>
                             </div>

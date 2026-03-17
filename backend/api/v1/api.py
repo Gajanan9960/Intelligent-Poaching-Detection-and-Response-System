@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from backend.api.v1.endpoints import auth, users, video, password_reset, detections, alerts
+from api.v1.endpoints import auth, users, video, password_reset, detections, alerts
 
 api_router = APIRouter()
 api_router.include_router(auth.router, tags=["login"])

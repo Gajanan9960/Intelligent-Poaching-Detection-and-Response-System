@@ -2,10 +2,10 @@ from datetime import timedelta
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from backend.core import security
-from backend.core.config import settings
-from backend.db.mongodb import get_database
-from backend.schemas.token import Token
+from core import security
+from core.config import settings
+from db.mongodb import get_database
+from schemas.token import Token
 
 router = APIRouter()
 
@@ -23,7 +23,9 @@ async def login_access_token(form_data: OAuth2PasswordRequestForm = Depends()) -
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
-            user["email"], expires_delta=access_token_expires
+            user["email"], 
+            role=user.get("role", "ranger"),
+            expires_delta=access_token_expires
         ),
         "token_type": "bearer",
     }

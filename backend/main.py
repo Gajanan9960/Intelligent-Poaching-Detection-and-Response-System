@@ -3,10 +3,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.core.config import settings
-from backend.db.mongodb import connect_to_mongo, close_mongo_connection
+from core.config import settings
+from db.mongodb import connect_to_mongo, close_mongo_connection
 
-from backend.services.detection_service import detection_service
+from services.detection_service import detection_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,7 +51,7 @@ if os.path.isdir("backend/static"):
 async def root():
     return {"message": "Welcome to Intelligent Poaching Detection API"}
 
-from backend.api.v1.api import api_router
+from api.v1.api import api_router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 if __name__ == "__main__":

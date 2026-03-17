@@ -45,6 +45,17 @@ export function useVideos(pollInterval = 10000) {
     // Check if any video is currently processing
     const hasProcessing = videos.some(v => v.status === 'processing');
 
+    const clearAll = useCallback(async () => {
+        try {
+            await videoService.clearAll();
+            setVideos([]);
+            return true;
+        } catch (err) {
+            console.error("Failed to clear detections:", err);
+            return false;
+        }
+    }, []);
+
     return {
         videos,
         loading,
@@ -52,5 +63,6 @@ export function useVideos(pollInterval = 10000) {
         hasProcessing,
         refetch: () => fetchVideos(false),
         silentRefetch: () => fetchVideos(true),
+        clearAll,
     };
 }

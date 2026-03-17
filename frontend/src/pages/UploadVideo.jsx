@@ -314,14 +314,20 @@ export default function UploadVideo() {
                                     <div className="flex items-center gap-4 pt-2">
                                         <button
                                             type="submit"
-                                            disabled={uploading || files.length === 0}
-                                            className={`flex-1 px-6 py-4 rounded-2xl font-semibold transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] flex items-center justify-center gap-3 ${uploading ? 'bg-emerald-800 text-emerald-400/50 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-400 text-[#020804] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]'}`}
+                                            disabled={uploading || files.length === 0 || result === 'success'}
+                                            className={`flex-1 px-6 py-4 rounded-2xl font-semibold transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] flex items-center justify-center gap-3 ${
+                                                uploading ? 'bg-emerald-800 text-emerald-400/50 cursor-not-allowed' :
+                                                result === 'success' ? 'bg-emerald-900/50 text-emerald-500/50 border border-emerald-500/20 cursor-not-allowed' :
+                                                'bg-emerald-500 hover:bg-emerald-400 text-[#020804] hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]'
+                                            }`}
                                         >
-                                            <Activity className={`w-5 h-5 ${uploading ? 'animate-pulse text-emerald-400' : ''}`} />
-                                            {uploading
-                                                ? <span className="flex items-center gap-2">Analyzing Target<span className="flex space-x-1"><span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span><span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span><span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span></span> {overallProgress}%</span>
-                                                : `Start YOLOv8 Scan — ${files.length} image${files.length !== 1 ? 's' : ''}`
-                                            }
+                                            {result === 'success' ? (
+                                                <><CheckCircle2 className="w-5 h-5 text-emerald-500/50" /> Images Successfully Analysed</>
+                                            ) : uploading ? (
+                                                <><Activity className="w-5 h-5 animate-spin text-emerald-400" /> Scanning Database... {overallProgress}%</>
+                                            ) : (
+                                                <><Activity className="w-5 h-5" /> Start YOLOv8 Scan — {files.length} image{files.length !== 1 ? 's' : ''}</>
+                                            )}
                                         </button>
                                     </div>
 

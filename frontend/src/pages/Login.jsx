@@ -18,8 +18,12 @@ export default function Login() {
         setError('');
         setLoading(true);
         try {
-            await login(email, password);
-            navigate('/dashboard');
+            const userData = await login(email, password);
+            if (userData?.role === 'officer') {
+                navigate('/officer-dashboard');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err) {
             const detail = err?.response?.data?.detail;
             setError(detail || 'Invalid credentials or server unreachable.');

@@ -35,7 +35,7 @@ export default function Topbar({ title, subtitle, actions }) {
         : user?.email?.charAt(0).toUpperCase() || 'A';
 
     return (
-        <header className="h-16 shrink-0 border-b border-forest-800 bg-forest-950/80 backdrop-blur-sm flex items-center px-6 gap-4">
+        <header className="relative z-50 h-16 shrink-0 border-b border-forest-800 bg-forest-950/80 backdrop-blur-sm flex items-center px-6 gap-4">
             {/* Page Title */}
             <div className="flex-1 min-w-0">
                 {title && (

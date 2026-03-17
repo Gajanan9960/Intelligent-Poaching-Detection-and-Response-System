@@ -65,6 +65,9 @@ export const videoService = {
 
     /** Delete a video by ID */
     delete: (id) => api.delete(`/video/${id}`),
+
+    /** Clear all previous detections for user */
+    clearAll: () => api.delete('/video/clear'),
 };
 
 // ─── Detection Services ───────────────────────────────────

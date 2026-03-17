@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
-from typing import Any, Union
-import asyncio
+from typing import Any, Union, Optional
+
 from jose import jwt
 import bcrypt
-from backend.core.config import settings
+from core.config import settings
 
-def create_access_token(subject: Union[str, Any], role: str = "ranger", expires_delta: timedelta = None) -> str:
+def create_access_token(subject: Union[str, Any], role: str = "ranger", expires_delta: Optional[timedelta] = None) -> str:
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
@@ -18,16 +18,19 @@ def create_access_token(subject: Union[str, Any], role: str = "ranger", expires_
 def _verify_password_sync(plain_password: str, hashed_password: str) -> bool:
     """Synchronous bcrypt password verification (CPU-bound)."""
     try:
+        print("[DEBUG] Verifying password synchronously")
         password_bytes = plain_password.encode('utf-8')
         hashed_bytes = hashed_password.encode('utf-8')
-        return bcrypt.checkpw(password_bytes, hashed_bytes)
+        res = bcrypt.checkpw(password_bytes, hashed_bytes)
+        print(f"[DEBUG] Password valid: {res}")
+        return res
     except Exception as e:
         print(f"Password verification failed: {e}")
         return False
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password using bcrypt in a thread pool to avoid blocking the event loop."""
-    return await asyncio.to_thread(_verify_password_sync, plain_password, hashed_password)
+    """Verify password synchronously."""
+    return _verify_password_sync(plain_password, hashed_password)
 
 def _get_password_hash_sync(password: str) -> str:
     """Synchronous bcrypt hashing (CPU-bound)."""
@@ -37,5 +40,6 @@ def _get_password_hash_sync(password: str) -> str:
     return hashed.decode('utf-8')
 
 async def get_password_hash(password: str) -> str:
-    """Hash password using bcrypt in a thread pool to avoid blocking the event loop."""
-    return await asyncio.to_thread(_get_password_hash_sync, password)
+    """Hash password synchronously."""
+    return _get_password_hash_sync(password)
+

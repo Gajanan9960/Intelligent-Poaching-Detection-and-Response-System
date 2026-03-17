@@ -5,10 +5,10 @@ from typing import List, Dict, Any
 from datetime import datetime
 from ultralytics import YOLO
 
-from backend.db.mongodb import get_database
-from backend.schemas.detection import DetectionCreate
-from backend.schemas.alert import AlertCreate, AlertStatus
-from backend.services.email_service import EmailService
+from db.mongodb import get_database
+from schemas.detection import DetectionCreate
+from schemas.alert import AlertCreate, AlertStatus
+from services.email_service import EmailService
 
 class DetectionService:
     def __init__(self):
@@ -39,9 +39,24 @@ class DetectionService:
         if not self.model:
             raise RuntimeError("YOLO model is not loaded.")
 
-        results = self.model(file_path) # Run inference
-        
         db = get_database()
+        
+        # 0. Set status to processing
+        await db.videos.update_one(
+            {"_id": video_id},
+            {"$set": {"status": "processing"}}
+        )
+
+        try:
+            results = self.model(file_path) # Run inference
+        except Exception as e:
+            print(f"Error during YOLO inference: {e}")
+            await db.videos.update_one(
+                {"_id": video_id},
+                {"$set": {"status": "failed"}}
+            )
+            return {"detections": [], "alerts": []}
+
         detections = []
         alerts_generated = []
 
@@ -54,8 +69,25 @@ class DetectionService:
             for box in boxes:
                 class_id = int(box.cls[0])
                 confidence = float(box.conf[0])
-                class_name = r.names[class_id]
+                class_name = r.names[class_id].lower()
                 
+                # Strict domain mapping required by user
+                mapping = {
+                    "person": "poacher", "hunter": "poacher", "poacher": "poacher",
+                    "gun": "weapon", "rifle": "weapon", "pistol": "weapon", "weapon": "weapon", "knife": "weapon",
+                    "ranger": "ranger", "guard": "ranger", "truck": "ranger", "car": "ranger", "vehicle": "ranger",
+                    "animal": "animal", "elephant": "animal", "tiger": "animal", "lion": "animal", "rhino": "animal",
+                    "bear": "animal", "zebra": "animal", "giraffe": "animal", "bird": "animal", "horse": "animal",
+                    "cow": "animal", "sheep": "animal", "dog": "animal", "cat": "animal"
+                }
+                
+                mapped_class = mapping.get(class_name)
+                # If the YOLO class isn't strictly recognized in our domain mapping, drop it.
+                if not mapped_class:
+                    continue
+                    
+                class_name = mapped_class
+
                 # Check confidence threshold if needed
                 if confidence < 0.3:
                     continue
@@ -108,6 +140,12 @@ class DetectionService:
                         image_path=frame_path
                     )
                     
+        # 4. Mark video as completed
+        await db.videos.update_one(
+            {"_id": video_id},
+            {"$set": {"status": "completed"}}
+        )
+        
         return {
             "detections": detections,
             "alerts": alerts_generated

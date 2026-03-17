@@ -96,9 +96,14 @@ export default function Sidebar({ collapsed, onToggle }) {
                 {navigation.filter(item => {
                     const role = user?.role || 'ranger';
                     if (role === 'admin') return true;
-                    if (role === 'officer' && item.name === 'Upload Image') return false;
-                    if (role === 'ranger' && item.name === 'Officer Dashboard') return false;
-                    if (role === 'ranger' && item.name === 'Active Alerts') return false;
+                    if (role === 'officer') {
+                        // Officers only see incident response and system settings
+                        return ['Officer Dashboard', 'Active Alerts', 'System Settings'].includes(item.name);
+                    }
+                    if (role === 'ranger') {
+                        // Rangers see standard dashboard, upload, results, and settings
+                        return ['Dashboard', 'Upload Image', 'Detection Results', 'System Settings'].includes(item.name);
+                    }
                     return true;
                 }).map((item) => {
                     const active = isActive(item.href);

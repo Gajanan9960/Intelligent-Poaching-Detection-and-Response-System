@@ -1,8 +1,8 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from backend.core.config import settings
+from core.config import settings
 
 class MongoDB:
-    client: AsyncIOMotorClient = None
+    client = None
     db = None
 
 db = MongoDB()

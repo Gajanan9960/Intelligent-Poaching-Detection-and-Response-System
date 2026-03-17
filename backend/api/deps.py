@@ -3,10 +3,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from pydantic import ValidationError
-from backend.core.config import settings
-from backend.db.mongodb import get_database
-from backend.schemas.token import TokenPayload
-from backend.schemas.user import User, Role
+from core.config import settings
+from db.mongodb import get_database
+from schemas.token import TokenPayload
+from schemas.user import User, Role
 from typing import List
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -42,6 +42,7 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, user: User = Depends(get_current_user)):
+        print(f"[DEBUG RBAC] User: {user.email}, Role: {user.role}, Allowed: {self.allowed_roles}")
         if user.role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

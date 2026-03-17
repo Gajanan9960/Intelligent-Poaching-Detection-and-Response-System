@@ -23,6 +23,7 @@ class AlertInDB(AlertBase):
 
 class Alert(AlertBase):
     id: str
+    alert_id: str
 
     class Config:
         from_attributes = True

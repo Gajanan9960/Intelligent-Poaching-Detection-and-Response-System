@@ -1,10 +1,10 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
-from backend.api import deps
-from backend.core import security
-from backend.db.mongodb import get_database
-from backend.schemas.user import User, UserCreate, Role
+from api import deps
+from core import security
+from db.mongodb import get_database
+from schemas.user import User, UserCreate, Role
 
 router = APIRouter()
 

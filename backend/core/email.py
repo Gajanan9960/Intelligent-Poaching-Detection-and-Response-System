@@ -1,6 +1,6 @@
 from email.message import EmailMessage
 import aiosmtplib
-from backend.core.config import settings
+from core.config import settings
 
 async def send_email(
     subject: str,

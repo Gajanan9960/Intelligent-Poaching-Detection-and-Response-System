@@ -4,7 +4,7 @@ from email.message import EmailMessage
 import asyncio
 from datetime import datetime
 
-from backend.core.config import settings
+from core.config import settings
 
 class EmailService:
     def __init__(self):
