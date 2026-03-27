@@ -38,7 +38,7 @@ const PublicRoute = ({ children }) => {
     return <PageLoader message="Authenticating secure channel..." />;
   }
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 };

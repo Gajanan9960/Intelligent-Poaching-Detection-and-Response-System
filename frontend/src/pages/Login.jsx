@@ -141,7 +141,7 @@ export default function Login() {
                                     Authenticating...
                                 </span>
                             ) : (
-                                'Initiate Uplink'
+                                'Sign In'
                             )}
                         </Button>
                     </form>
@@ -149,7 +149,7 @@ export default function Login() {
                     <p className="mt-8 text-center text-sm text-forest-400">
                         New field agent?{' '}
                         <Link to="/register" className="font-semibold text-forest-500 hover:text-forest-300 transition-colors">
-                            Request clearance
+                            Register Agent
                         </Link>
                     </p>
                 </div>

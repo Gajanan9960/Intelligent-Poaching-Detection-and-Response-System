@@ -13,6 +13,7 @@ env_path = current_dir.parent / ".env"
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Intelligent Poaching Detection System"
+    ENV: str = "dev"  # "dev" or "production"
     
     # CORS — use plain strings to avoid AnyHttpUrl parsing issues with .env format
     BACKEND_CORS_ORIGINS: List[str] = []
@@ -41,6 +42,12 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    @validator("JWT_SECRET")
+    def validate_jwt_secret(cls, v: str) -> str:
+        if len(v) < 32:
+            raise ValueError("JWT_SECRET must be at least 32 characters long")
+        return v
 
     EMAIL_ADDRESS: str = ""
     EMAIL_APP_PASSWORD: str = ""

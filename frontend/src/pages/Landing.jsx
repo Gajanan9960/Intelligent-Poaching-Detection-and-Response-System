@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ShieldCheck, ImageIcon, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Activity, ShieldCheck, ImageIcon, ArrowRight, LayoutDashboard, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Landing() {
@@ -17,7 +17,7 @@ export default function Landing() {
                         <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" />
                     </div>
                     <span className="text-xl font-bold bg-gradient-to-r from-emerald-300 to-green-500 bg-clip-text text-transparent tracking-wide">
-                        PoachGuard AI
+                        GuardianAI
                     </span>
                 </div>
                 <div className="flex items-center gap-3 md:gap-4 relative">
@@ -25,11 +25,11 @@ export default function Landing() {
                         <div className="w-40 h-10 bg-emerald-500/10 rounded-full animate-pulse blur-sm"></div>
                     ) : !isAuthenticated ? (
                         <>
-                            <Link to="/login" className="px-5 py-2 text-sm font-medium text-emerald-300 hover:text-white transition-colors">
-                                Sign In
+                            <Link to="/login" className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-emerald-300 hover:text-white transition-colors">
+                                <LogIn className="w-4 h-4" /> Login
                             </Link>
-                            <Link to="/upload" className="px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-full transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]">
-                                Upload Image
+                            <Link to="/register" className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-full transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)]">
+                                <UserPlus className="w-4 h-4" /> Register
                             </Link>
                         </>
                     ) : (
@@ -89,7 +89,7 @@ export default function Landing() {
 
             {/* Footer */}
             <footer className="relative z-10 py-8 text-center text-sm text-emerald-200/40 border-t border-white/5 mt-12 bg-black/40 backdrop-blur-md">
-                © 2026 PoachGuard AI • Department of Forestry & Wildlife
+                © 2026 GuardianAI • Department of Forestry & Wildlife
             </footer>
         </div>
     );

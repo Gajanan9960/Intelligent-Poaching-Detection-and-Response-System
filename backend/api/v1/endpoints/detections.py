@@ -17,6 +17,15 @@ async def read_detections(
     Retrieve detections. Allowed for all authenticated users.
     """
     db = get_database()
-    cursor = db.detections.find().sort("detected_at", -1).skip(skip).limit(limit)
+    # Officers/admins see all detections; rangers only see their own
+    if current_user.role in ("admin", "officer"):
+        query = {}
+    else:
+        user_videos = await db.videos.find(
+            {"user_id": current_user.id}, {"_id": 1}
+        ).to_list(length=None)
+        video_ids = [v["_id"] for v in user_videos]
+        query = {"video_id": {"$in": video_ids}}
+    cursor = db.detections.find(query).sort("detected_at", -1).skip(skip).limit(limit)
     detections = await cursor.to_list(length=limit)
     return [Detection(**d, id=str(d["_id"])) for d in detections]

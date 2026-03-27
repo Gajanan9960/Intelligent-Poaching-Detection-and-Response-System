@@ -137,30 +137,31 @@ async def clear_all_videos_and_detections(
     current_user: User = Depends(deps.RoleChecker(["admin", "ranger"]))
 ):
     db = get_database()
-    
-    # Delete from DB
-    await db.videos.delete_many({"user_id": current_user.id})
-    # Since detections don't have user_id, we either delete all or find by video_ids. 
-    # For a simple "clear all", we can delete all videos for user, then all detections for those videos.
-    # To keep it simple, let's just delete videos by user, and we can delete all detections associated.
-    # Actually, let's fetch video ids first
+    import glob
+
+    # 1. Fetch user video IDs FIRST (before deleting anything)
     user_videos = await db.videos.find({"user_id": current_user.id}).to_list(length=None)
     video_ids = [v["_id"] for v in user_videos]
-    
-    await db.videos.delete_many({"_id": {"$in": video_ids}})
-    await db.detections.delete_many({"video_id": {"$in": video_ids}})
-    # Also clear alerts (optional, but good for clean slate)
-    detection_ids = [d["detection_id"] for d in await db.detections.find({"video_id": {"$in": video_ids}}).to_list(length=None)] if video_ids else []
-    if detection_ids:
-        await db.alerts.delete_many({"detection_id": {"$in": detection_ids}})
-    
-    # Clean up physical files in uploads and images
-    import glob
-    for v_id in video_ids:
-        for f in glob.glob(f"backend/static/uploads/{v_id}_*"):
-            try:
-                os.remove(f)
-            except:
-                pass
-                
+
+    if video_ids:
+        # 2. Get detection IDs for alert cleanup
+        det_docs = await db.detections.find(
+            {"video_id": {"$in": video_ids}}, {"detection_id": 1}
+        ).to_list(length=None)
+        detection_ids = [d["detection_id"] for d in det_docs if "detection_id" in d]
+
+        # 3. Delete in reverse-dependency order: alerts → detections → videos
+        if detection_ids:
+            await db.alerts.delete_many({"detection_id": {"$in": detection_ids}})
+        await db.detections.delete_many({"video_id": {"$in": video_ids}})
+        await db.videos.delete_many({"_id": {"$in": video_ids}})
+
+        # 4. Clean up physical files
+        for v_id in video_ids:
+            for f in glob.glob(f"backend/static/uploads/{v_id}_*"):
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+
     return {"status": "success", "message": "All previous detections and videos cleared."}

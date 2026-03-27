@@ -20,7 +20,7 @@ export default function Register() {
         setLoading(true);
         try {
             await register(email, password, fullName);
-            navigate('/');
+            navigate('/dashboard');
         } catch (err) {
             let errorMsg = 'Registration failed. Check clearance levels.';
             if (err.response?.data?.detail) {
@@ -53,7 +53,7 @@ export default function Register() {
                         Join the <br /><span className="font-semibold text-white">Global Defense Grid</span>
                     </h2>
                     <p className="text-forest-300 mt-6 max-w-md text-lg">
-                        Request clearance to deploy AI surveillance and protect endangered wildlife reserves worldwide.
+                        Register to deploy AI surveillance and protect endangered wildlife reserves worldwide.
                     </p>
                 </div>
 
@@ -75,7 +75,7 @@ export default function Register() {
                 <div className="w-full max-w-md space-y-8 glass-panel p-8 sm:p-10 rounded-2xl">
                     <div className="text-center lg:text-left">
                         <ShieldAlert size={48} className="mx-auto lg:mx-0 text-forest-500 mb-6 lg:hidden" />
-                        <h2 className="text-3xl font-bold tracking-tight text-white mb-2">Request Clearance</h2>
+                        <h2 className="text-3xl font-bold tracking-tight text-white mb-2">Register Agent</h2>
                         <p className="text-sm text-forest-300">Register as a new field operative.</p>
                     </div>
 
@@ -155,7 +155,7 @@ export default function Register() {
                     <p className="mt-8 text-center text-sm text-forest-400">
                         Already cleared?{' '}
                         <Link to="/login" className="font-semibold text-forest-500 hover:text-forest-300 transition-colors">
-                            Initiate Uplink
+                            Sign In
                         </Link>
                     </p>
                 </div>

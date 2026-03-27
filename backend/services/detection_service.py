@@ -1,6 +1,8 @@
 import os
 import cv2
 import uuid
+import torch
+import functools
 from typing import List, Dict, Any
 from datetime import datetime
 from ultralytics import YOLO
@@ -20,6 +22,17 @@ class DetectionService:
     def load_model(self):
         """Loads the YOLOv8 model into memory. Called once during FastAPI lifespan startup."""
         print(f"Loading YOLO model from {self.model_path}...")
+        # ── PyTorch 2.6+ compatibility ──────────────────────────
+        # PyTorch 2.6 changed torch.load default to weights_only=True,
+        # which breaks YOLO model loading. Wrap torch.load to force
+        # weights_only=False for any call made during model init.
+        _original_load = torch.load
+
+        def _patched_load(*args, **kwargs):
+            kwargs["weights_only"] = False
+            return _original_load(*args, **kwargs)
+
+        torch.load = _patched_load
         try:
             # Check if model exists, if not use a pretrained base model as fallback for dev
             if not os.path.exists(self.model_path):
@@ -31,6 +44,9 @@ class DetectionService:
         except Exception as e:
             print(f"Failed to load YOLO model: {e}")
             self.model = None
+        finally:
+            # Restore original torch.load
+            torch.load = _original_load
 
     async def process_video(self, video_id: str, file_path: str) -> List[Dict[str, Any]]:
         """
@@ -71,14 +87,27 @@ class DetectionService:
                 confidence = float(box.conf[0])
                 class_name = r.names[class_id].lower()
                 
-                # Strict domain mapping required by user
+                # Domain mapping: COCO class names + custom model names → app categories
                 mapping = {
-                    "person": "poacher", "hunter": "poacher", "poacher": "poacher",
-                    "gun": "weapon", "rifle": "weapon", "pistol": "weapon", "weapon": "weapon", "knife": "weapon",
-                    "ranger": "ranger", "guard": "ranger", "truck": "ranger", "car": "ranger", "vehicle": "ranger",
-                    "animal": "animal", "elephant": "animal", "tiger": "animal", "lion": "animal", "rhino": "animal",
-                    "bear": "animal", "zebra": "animal", "giraffe": "animal", "bird": "animal", "horse": "animal",
-                    "cow": "animal", "sheep": "animal", "dog": "animal", "cat": "animal"
+                    # Custom model classes (best.pt)
+                    "poacher": "poacher", "hunter": "poacher",
+                    "weapon": "weapon", "gun": "weapon", "rifle": "weapon", "pistol": "weapon",
+                    "ranger": "ranger", "guard": "ranger",
+                    # COCO: person → poacher
+                    "person": "poacher",
+                    # COCO: weapons (class 43=knife, class 76=scissors)
+                    "knife": "weapon", "scissors": "weapon",
+                    # COCO: vehicles → ranger (patrol/ranger presence proxy)
+                    "car": "ranger", "truck": "ranger", "bus": "ranger",
+                    "motorcycle": "ranger", "bicycle": "ranger",
+                    # COCO: animals (classes 14-23)
+                    "bird": "animal", "cat": "animal", "dog": "animal",
+                    "horse": "animal", "sheep": "animal", "cow": "animal",
+                    "elephant": "animal", "bear": "animal", "zebra": "animal",
+                    "giraffe": "animal",
+                    # Custom model animals (non-COCO)
+                    "tiger": "animal", "lion": "animal", "rhino": "animal",
+                    "deer": "animal", "leopard": "animal",
                 }
                 
                 mapped_class = mapping.get(class_name)
@@ -111,9 +140,10 @@ class DetectionService:
                 
                 det_dict = detection_data.model_dump()
                 det_dict["detection_id"] = str(uuid.uuid4())
+                det_dict.setdefault("detected_at", datetime.utcnow())
                 
-                await db.detections.insert_one(det_dict)
-                det_dict["_id"] = str(det_dict["_id"])
+                result = await db.detections.insert_one(det_dict)
+                det_dict["_id"] = str(result.inserted_id)
                 detections.append(det_dict)
 
                 # 2. Check if this is a critical threat and trigger alert
@@ -127,9 +157,10 @@ class DetectionService:
                     )
                     alert_dict = alert_data.model_dump()
                     alert_dict["alert_id"] = str(uuid.uuid4())
+                    alert_dict.setdefault("created_at", datetime.utcnow())
                     
-                    await db.alerts.insert_one(alert_dict)
-                    alert_dict["_id"] = str(alert_dict["_id"])
+                    result = await db.alerts.insert_one(alert_dict)
+                    alert_dict["_id"] = str(result.inserted_id)
                     alerts_generated.append(alert_dict)
                     
                     # 3. Dispatch Email Contextually

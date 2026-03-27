@@ -459,7 +459,9 @@ function DetectionTimeline({ detections, status }) {
                                 <p className={`text-sm ${isCritical ? 'text-alert-100 font-medium' : 'text-slate-300'}`}>
                                     {detClass === 'poacher' ? 'Suspicious human signature detected in sector.' :
                                         detClass === 'weapon' ? 'Weapon signature detected → ALERT SENT' :
-                                            'Wildlife movement registered.'}
+                                        detClass === 'ranger' ? 'Ranger/patrol unit identified in vicinity.' :
+                                        detClass === 'animal' ? 'Wildlife movement registered — species tracked.' :
+                                            `${detClass} detected in surveillance feed.`}
                                 </p>
                             </div>
                         </div>

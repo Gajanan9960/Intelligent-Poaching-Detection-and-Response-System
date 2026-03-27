@@ -28,12 +28,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow all configured origins + always allow localhost dev ports
+# CORS — only auto-add localhost dev ports when NOT in production
 cors_origins = list(settings.BACKEND_CORS_ORIGINS)
-# Ensure common dev URLs are always included
-for url in ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"]:
-    if url not in cors_origins:
-        cors_origins.append(url)
+if settings.ENV != "production":
+    for url in ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:3000"]:
+        if url not in cors_origins:
+            cors_origins.append(url)
 
 app.add_middleware(
     CORSMiddleware,

@@ -16,7 +16,8 @@ reusable_oauth2 = OAuth2PasswordBearer(
 async def get_current_user(token: str = Depends(reusable_oauth2)) -> User:
     try:
         payload = jwt.decode(
-            token, settings.JWT_SECRET, algorithms=[settings.ALGORITHM]
+            token, settings.JWT_SECRET, algorithms=[settings.ALGORITHM],
+            options={"verify_iss": False}  # Soft-launch: don't reject old tokens yet
         )
         token_data = TokenPayload(**payload)
     except (JWTError, ValidationError):
@@ -42,7 +43,6 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, user: User = Depends(get_current_user)):
-        print(f"[DEBUG RBAC] User: {user.email}, Role: {user.role}, Allowed: {self.allowed_roles}")
         if user.role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

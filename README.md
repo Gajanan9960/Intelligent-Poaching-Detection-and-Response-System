@@ -221,6 +221,8 @@ backend/models/best.pt
 ```
 > If no custom model is found, the system falls back to `yolov8n.pt` (general pretrained model).
 
+> **Note (PyTorch 2.6+):** The system automatically handles the `weights_only=True` default change in PyTorch 2.6+ that otherwise breaks YOLO model loading. No manual patching is needed.
+
 ### 5. Start the Application
 
 ```bash
@@ -241,12 +243,15 @@ This starts both servers:
 Create `backend/.env` using the template below:
 
 ```env
+# Environment (dev | production)
+ENV="dev"
+
 # Database
 MONGO_URI="mongodb://localhost:27017"
 DATABASE_NAME="poaching_detection_db"
 
-# JWT Authentication
-JWT_SECRET="your_super_secret_jwt_key_here"
+# JWT Authentication (secret must be ≥32 characters)
+JWT_SECRET="your_super_secret_jwt_key_here_min_32_chars"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES="10080"
 
@@ -260,6 +265,12 @@ EMAILS_FROM_NAME="GuardianAI Security"
 # CORS
 BACKEND_CORS_ORIGINS=["http://localhost:5173", "http://localhost:5174"]
 ```
+
+> **Security Notes:**
+> - `JWT_SECRET` must be at least 32 characters (enforced at startup).
+> - Set `ENV=production` in production to disable automatic localhost CORS origins.
+> - JWT tokens include an `iss` (issuer) claim for traceability.
+> - Rangers can only view their own detections (data-scoped access).
 
 ---
 
@@ -291,7 +302,7 @@ BACKEND_CORS_ORIGINS=["http://localhost:5173", "http://localhost:5174"]
 | `POST` | `/api/v1/video/upload` | Ranger/Admin | Upload image for detection |
 | `GET` | `/api/v1/video/list` | JWT | List user's uploaded images |
 | `DELETE` | `/api/v1/video/clear` | Ranger/Admin | Clear all user detections |
-| `GET` | `/api/v1/detections/` | JWT | Get all detections |
+| `GET` | `/api/v1/detections/` | JWT | Get detections (ranger: own only, officer/admin: all) |
 | `GET` | `/api/v1/alerts/` | Officer/Admin | List all alerts |
 | `PUT` | `/api/v1/alerts/{id}/resolve` | Officer/Admin | Resolve an alert |
 
