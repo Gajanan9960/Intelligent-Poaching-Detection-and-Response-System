@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("/", response_model=List[Alert])
 async def read_alerts(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 1000,
     current_user: User = Depends(deps.RoleChecker(["admin", "officer"]))
 ) -> Any:
     """

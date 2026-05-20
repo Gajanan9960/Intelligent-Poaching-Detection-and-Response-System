@@ -10,7 +10,7 @@ router = APIRouter()
 @router.get("/", response_model=List[Detection])
 async def read_detections(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 1000,
     current_user: User = Depends(deps.get_current_user)
 ) -> Any:
     """

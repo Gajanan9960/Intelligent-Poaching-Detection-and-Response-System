@@ -108,10 +108,10 @@ async def list_videos(
             "as": "detections"
         }},
         {"$sort": {"uploaded_at": -1}},
-        {"$limit": 100}
+        {"$limit": 1000}
     ]
     
-    videos = await db.videos.aggregate(pipeline).to_list(length=100)
+    videos = await db.videos.aggregate(pipeline).to_list(length=1000)
     
     # Fix _id to id for frontend
     results = []
