@@ -1,9 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/common/Button';
 import { StatusBadge, ThreatBadge } from '../components/common/Badge';
 import { useVideos } from '../hooks/useVideos';
+import { videoService } from '../api/services';
 import {
     ArrowLeft, ImageIcon, Crosshair, Target, Clock, ChevronRight,
     AlertTriangle, Shield, Eye, Camera, Maximize, AlertOctagon
@@ -30,21 +32,19 @@ export default function DetectionResults() {
     }, [location.search]);
 
     const availableClasses = useMemo(() => {
-        const coreClasses = ['animal', 'poacher', 'weapon', 'ranger'];
-        const classes = new Set(coreClasses);
-        videos.forEach(v => {
-            v.detections?.forEach(d => {
-                const cls = d.detected_class || d.object_type;
-                if (cls) classes.add(cls);
-            });
-        });
-        return ['All', ...Array.from(classes).sort()];
-    }, [videos]);
+        return ['All', 'Animal', 'poacher', 'Ranger', 'Weapons'];
+    }, []);
 
     const filteredVideos = useMemo(() => {
         if (filterClass === 'All') return videos;
+        const targetCls = filterClass === 'Weapons' ? 'weapon' : filterClass.toLowerCase();
+
         return videos.filter(v => 
-            v.detections?.some(d => (d.detected_class || d.object_type) === filterClass)
+            v.detections?.some(d => {
+                let cls = (d.detected_class || d.object_type || '').toLowerCase();
+                if (cls === 'weapons') cls = 'weapon';
+                return cls === targetCls;
+            })
         );
     }, [videos, filterClass]);
 
@@ -121,7 +121,6 @@ export default function DetectionResults() {
                             <span className="text-sm font-semibold text-emerald-400 uppercase tracking-wider shrink-0">Filter Threat:</span>
                             <div className="flex gap-2">
                                 {availableClasses.map(cls => {
-                                    const displayClass = cls === 'weapon' ? 'Weapons' : cls === 'animal' ? 'Animal' : cls === 'ranger' ? 'Ranger' : cls === 'poacher' ? 'poacher' : cls;
                                     return (
                                     <button
                                         key={cls}
@@ -130,7 +129,7 @@ export default function DetectionResults() {
                                             ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(52,211,153,0.4)]' 
                                             : 'bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10'}`}
                                     >
-                                        {displayClass}
+                                        {cls}
                                     </button>
                                     );
                                 })}
@@ -179,7 +178,13 @@ export default function DetectionResults() {
 }
 
 function VideoCard({ video }) {
-    const hasCritical = video.detections?.some(d => ['poacher', 'weapon'].includes((d.detected_class || d.object_type)?.toLowerCase()));
+    const hasRanger = video.detections?.some(d => (d.detected_class || d.object_type)?.toLowerCase() === 'ranger');
+    const hasCritical = video.detections?.some(d => {
+        const cls = (d.detected_class || d.object_type)?.toLowerCase();
+        if (cls === 'poacher') return true;
+        if (cls === 'weapon' && !hasRanger) return true;
+        return false;
+    });
 
     return (
         <Link to={`/detections/${video._id || video.id}`} className="block group">
@@ -239,7 +244,14 @@ function VideoCard({ video }) {
 
 // ─── VideoDetailView ──────────────────────────────────────
 function VideoDetailView({ video }) {
-    const hasCritical = video.detections?.some(d => ['poacher', 'weapon'].includes((d.detected_class || d.object_type)?.toLowerCase()));
+    const navigate = useNavigate();
+    const hasRanger = video.detections?.some(d => (d.detected_class || d.object_type)?.toLowerCase() === 'ranger');
+    const hasCritical = video.detections?.some(d => {
+        const cls = (d.detected_class || d.object_type)?.toLowerCase();
+        if (cls === 'poacher') return true;
+        if (cls === 'weapon' && !hasRanger) return true;
+        return false;
+    });
     const apiBase = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
     const imageUrl = video.image_url ? `${apiBase}${video.image_url}` : null;
 
@@ -344,45 +356,7 @@ function VideoDetailView({ video }) {
 
                         {/* Detection Frames */}
                         {video.status === 'completed' && video.detections?.length > 0 && (
-                            <div className="bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl overflow-hidden p-6">
-                                <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-6">
-                                    <Eye className="h-4 w-4 text-emerald-400" />
-                                    Detection Overlays
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {video.detections.slice(0, 6).map((det, i) => {
-                                        const detClass = det.detected_class || det.object_type;
-                                        const detConf = det.confidence || det.confidence_score;
-                                        const isCritical = ['poacher', 'weapon'].includes(detClass?.toLowerCase());
-                                        const detImageUrl = (det.image_url || det.frame_image_path) ? `${apiBase}${det.image_url || det.frame_image_path}` : null;
-
-                                        return (
-                                            <div key={i} className={`relative aspect-video rounded-xl bg-black border border-white/10 overflow-hidden group cursor-pointer hover:scale-[1.02] ${isCritical ? 'hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]'} transition-all`}>
-                                                {detImageUrl ? (
-                                                    <img src={detImageUrl} alt="Detection" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                                                ) : imageUrl ? (
-                                                    <img src={imageUrl} alt="Source" className="w-full h-full object-cover opacity-40 group-hover:opacity-70 transition-opacity" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center opacity-40 bg-[#06140b] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/40 to-black">
-                                                        <ImageIcon className="w-8 h-8 text-emerald-500/50" />
-                                                    </div>
-                                                )}
-
-                                                {/* Bounding Box */}
-                                                <div className="absolute inset-x-8 top-6 bottom-4 border-2 rounded pointer-events-none opacity-80 group-hover:scale-[1.02] transition-transform" style={{ borderColor: isCritical ? '#ef4444' : '#10b981' }}>
-                                                    <div className={`absolute -top-4 left-0 px-2 flex items-center gap-1 text-[10px] uppercase font-bold text-white rounded-tr rounded-bl tracking-widest ${isCritical ? 'bg-red-500' : 'bg-emerald-500'}`}>
-                                                        {detClass} {(detConf * 100).toFixed(0)}%
-                                                    </div>
-                                                </div>
-
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[2px]">
-                                                    <Maximize className="text-white w-8 h-8 drop-shadow-lg" />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                            <DetectionOverlaysGrid video={video} apiBase={apiBase} imageUrl={imageUrl} hasRanger={hasRanger} />
                         )}
 
                         <div className="bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl overflow-hidden">
@@ -400,6 +374,21 @@ function VideoDetailView({ video }) {
                                         <p className="text-emerald-400 font-mono tracking-widest text-sm uppercase animate-pulse">Running YOLOv8 Scan</p>
                                         <p className="text-emerald-100/40 text-xs mt-2">Detections will stream here in real-time.</p>
                                     </div>
+                                    <button 
+                                        onClick={async () => {
+                                            if (window.confirm('Are you sure you want to cancel this scan?')) {
+                                                try {
+                                                    await videoService.delete(video.id || video._id);
+                                                    navigate('/detections');
+                                                } catch (e) {
+                                                    console.error('Failed to cancel scan:', e);
+                                                }
+                                            }
+                                        }}
+                                        className="mt-4 px-6 py-2 border border-red-500/50 hover:bg-red-500/10 text-red-400 hover:text-red-300 rounded-full text-sm font-semibold transition-all shadow-sm flex items-center gap-2"
+                                    >
+                                        <AlertTriangle className="w-4 h-4" /> Cancel Scan
+                                    </button>
                                 </div>
                             ) : (
                                 <DetectionTimeline detections={video.detections || []} status={video.status} />
@@ -413,6 +402,8 @@ function VideoDetailView({ video }) {
 }
 
 function DetectionTimeline({ detections, status }) {
+    const hasRanger = detections.some(d => (d.detected_class || d.object_type)?.toLowerCase() === 'ranger');
+
     if (status === 'completed' && detections.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-16 text-emerald-500/50">
@@ -430,7 +421,8 @@ function DetectionTimeline({ detections, status }) {
                 {detections.map((det, i) => {
                     const detClass = det.detected_class || det.object_type;
                     const detConf = det.confidence || det.confidence_score;
-                    const isCritical = ['poacher', 'weapon'].includes(detClass?.toLowerCase());
+                    const isCritical = detClass?.toLowerCase() === 'poacher' || 
+                                       (detClass?.toLowerCase() === 'weapon' && !hasRanger);
                     const confPct = typeof detConf === 'number' ? `${(detConf * 100).toFixed(0)}%` : detConf || '—';
 
                     return (
@@ -451,7 +443,7 @@ function DetectionTimeline({ detections, status }) {
                                         </span>
                                         <ThreatBadge label={detClass} />
                                     </div>
-                                    <span className="text-xs text-forest-400 font-mono hidden sm:block">
+                                        <span className="text-xs text-forest-400 font-mono hidden sm:block">
                                         CONF: {confPct}
                                     </span>
                                 </div>
@@ -468,6 +460,146 @@ function DetectionTimeline({ detections, status }) {
                     );
                 })}
             </div>
+        </div>
+    );
+}
+
+function DetectionOverlaysGrid({ video, apiBase, imageUrl, hasRanger }) {
+    const [enlargedIndex, setEnlargedIndex] = useState(null);
+    const hoverTimeouts = useRef({});
+
+    const handleMouseEnter = (index) => {
+        // Clear any existing timeout for this index just in case
+        if (hoverTimeouts.current[index]) clearTimeout(hoverTimeouts.current[index]);
+        
+        // Set a new timeout to enlarge the image after 2 seconds
+        hoverTimeouts.current[index] = setTimeout(() => {
+            setEnlargedIndex(index);
+        }, 2000);
+    };
+
+    const handleMouseLeave = (index) => {
+        // Clear the timeout if the user stops hovering before 2 seconds
+        if (hoverTimeouts.current[index]) {
+            clearTimeout(hoverTimeouts.current[index]);
+            delete hoverTimeouts.current[index];
+        }
+    };
+
+    // Prevent scrolling when modal is open
+    useEffect(() => {
+        if (enlargedIndex !== null) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [enlargedIndex]);
+
+    return (
+        <div className="bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl overflow-hidden p-6 relative">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-6">
+                <Eye className="h-4 w-4 text-emerald-400" />
+                Detection Overlays
+                <span className="ml-2 text-xs text-emerald-500/50 font-normal">(Hover & hold 2s to enlarge)</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {video.detections.slice(0, 6).map((det, i) => {
+                    const detClass = det.detected_class || det.object_type;
+                    const detConf = det.confidence || det.confidence_score;
+                    const isCritical = detClass?.toLowerCase() === 'poacher' || 
+                                       (detClass?.toLowerCase() === 'weapon' && !hasRanger);
+                    const detImageUrl = (det.image_url || det.frame_image_path) ? `${apiBase}${det.image_url || det.frame_image_path}` : null;
+                    const activeImage = detImageUrl || imageUrl;
+
+                    return (
+                        <div 
+                            key={i} 
+                            onMouseEnter={() => handleMouseEnter(i)}
+                            onMouseLeave={() => handleMouseLeave(i)}
+                            onClick={() => setEnlargedIndex(i)}
+                            className={`relative aspect-video rounded-xl bg-black border border-white/10 overflow-hidden group cursor-pointer hover:scale-[1.02] ${isCritical ? 'hover:border-red-500 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]'} transition-all`}
+                        >
+                            {activeImage ? (
+                                <img src={activeImage} alt="Detection" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center opacity-40 bg-[#06140b] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/40 to-black">
+                                    <ImageIcon className="w-8 h-8 text-emerald-500/50" />
+                                </div>
+                            )}
+
+                            {/* Bounding Box Info */}
+                            <div className="absolute inset-x-8 top-6 bottom-4 border-2 rounded pointer-events-none opacity-80 group-hover:scale-[1.02] transition-transform" style={{ borderColor: isCritical ? '#ef4444' : '#10b981' }}>
+                                <div className={`absolute -top-4 left-0 px-2 flex items-center gap-1 text-[10px] uppercase font-bold text-white rounded-tr rounded-bl tracking-widest ${isCritical ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                                    {detClass} {(detConf * 100).toFixed(0)}%
+                                </div>
+                            </div>
+
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[2px]">
+                                <Maximize className="text-white w-8 h-8 drop-shadow-lg" />
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Modal for Enlarged View */}
+            {enlargedIndex !== null && createPortal(
+                <div 
+                    className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 cursor-zoom-out animate-fade-in"
+                    onClick={() => setEnlargedIndex(null)}
+                >
+                    {(() => {
+                        const det = video.detections[enlargedIndex];
+                        const detClass = det.detected_class || det.object_type;
+                        const detConf = det.confidence || det.confidence_score;
+                        const detImageUrl = (det.image_url || det.frame_image_path) ? `${apiBase}${det.image_url || det.frame_image_path}` : null;
+                        const activeImage = detImageUrl || imageUrl;
+                        const isCritical = detClass?.toLowerCase() === 'poacher' || 
+                                           (detClass?.toLowerCase() === 'weapon' && !hasRanger);
+
+                        return (
+                            <div className="relative max-w-7xl max-h-[90vh] w-full flex flex-col items-center justify-center pointer-events-none">
+                                <div 
+                                    className="absolute -top-12 left-0 right-0 flex justify-between items-center px-4 pointer-events-auto"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-widest text-white flex items-center gap-2 ${isCritical ? 'bg-red-600/80 border border-red-500' : 'bg-emerald-600/80 border border-emerald-500'}`}>
+                                        {isCritical ? <AlertTriangle className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                                        {detClass} - {(detConf * 100).toFixed(1)}% Confidence
+                                    </div>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEnlargedIndex(null);
+                                        }}
+                                        className="bg-white/10 hover:bg-white/20 text-white rounded-full p-2 backdrop-blur-md transition-colors cursor-pointer"
+                                    >
+                                        <ArrowLeft className="w-5 h-5 rotate-180" />
+                                    </button>
+                                </div>
+                                
+                                <div 
+                                    className="w-full h-full rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] pointer-events-auto flex items-center justify-center"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {activeImage && (
+                                        <img 
+                                            src={activeImage} 
+                                            alt="Enlarged Detection" 
+                                            className="w-auto h-auto max-w-full max-h-[85vh] object-contain bg-black border-2 border-white/10 rounded-2xl" 
+                                        />
+                                    )}
+                                </div>
+                                <p className="text-white/50 text-sm mt-4 tracking-widest uppercase font-mono drop-shadow-md pointer-events-auto">Click anywhere outside to close</p>
+                            </div>
+                        );
+                    })()}
+                </div>,
+                document.body
+            )}
         </div>
     );
 }

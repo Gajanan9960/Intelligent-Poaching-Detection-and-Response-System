@@ -72,6 +72,7 @@ export default function OfficerDashboard() {
                     <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-amber-500' : ''}`} />
                 </Button>
             }
+            theme="officer"
         >
             <motion.div
                 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}
@@ -88,15 +89,15 @@ export default function OfficerDashboard() {
 
                 {/* Stat Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
-                    <StatCard delay={0.1} title="Alerts Today" value={stats.totalAlertsToday} icon={ShieldAlert} loading={loading} trend={stats.totalAlertsToday > 0 ? 'Elevated threat level' : 'Normal perimeter'} />
-                    <StatCard delay={0.2} title="Active Threats" value={stats.activeAlerts} icon={RefreshCw} variant={stats.activeAlerts > 0 ? 'critical' : 'info'} loading={loading} trend={stats.activeAlerts > 0 ? 'Awaiting resolution' : 'All clear'} />
-                    <StatCard delay={0.3} title="Total Poachers" value={stats.poachers} icon={Crosshair} variant="default" loading={loading} trend="Historical DB" />
-                    <StatCard delay={0.4} title="Total Weapons" value={stats.weapons} icon={AlertTriangle} variant="default" loading={loading} trend="Historical DB" />
+                    <StatCard delay={0.1} title="Alerts Today" value={stats.totalAlertsToday} icon={ShieldAlert} loading={loading} />
+                    <StatCard delay={0.2} title="Active Threats" value={stats.activeAlerts} icon={RefreshCw} variant={stats.activeAlerts > 0 ? 'critical' : 'info'} loading={loading} />
+                    <StatCard delay={0.3} title="Total Poachers" value={stats.poachers} icon={Crosshair} variant="default" loading={loading} />
+                    <StatCard delay={0.4} title="Total Weapons" value={stats.weapons} icon={AlertTriangle} variant="default" loading={loading} />
                 </div>
 
                 {/* Alerts Table */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="glass-panel rounded-xl overflow-hidden mt-6">
-                    <div className="px-5 py-4 border-b border-forest-800 flex items-center justify-between">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="glass-panel rounded-xl overflow-hidden mt-6 border border-slate-800">
+                    <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
                         <h2 className="text-sm font-semibold text-slate-200">Actionable Threat Intelligence</h2>
                     </div>
 
@@ -113,11 +114,11 @@ export default function OfficerDashboard() {
                             <table className="data-table w-full text-left">
                                 <thead>
                                     <tr>
-                                        <th className="font-medium text-xs text-forest-400 uppercase tracking-wider py-3 px-5 border-b border-forest-800">Alert ID</th>
-                                        <th className="font-medium text-xs text-forest-400 uppercase tracking-wider py-3 px-5 border-b border-forest-800">Threat Type</th>
-                                        <th className="font-medium text-xs text-forest-400 uppercase tracking-wider py-3 px-5 border-b border-forest-800">Timestamp</th>
-                                        <th className="font-medium text-xs text-forest-400 uppercase tracking-wider py-3 px-5 border-b border-forest-800">Status</th>
-                                        <th className="font-medium text-xs text-forest-400 uppercase tracking-wider py-3 px-5 border-b border-forest-800 text-right">Actions</th>
+                                        <th className="font-medium text-xs text-slate-400 uppercase tracking-wider py-3 px-5 border-b border-slate-800">Alert ID</th>
+                                        <th className="font-medium text-xs text-slate-400 uppercase tracking-wider py-3 px-5 border-b border-slate-800">Threat Type</th>
+                                        <th className="font-medium text-xs text-slate-400 uppercase tracking-wider py-3 px-5 border-b border-slate-800">Timestamp</th>
+                                        <th className="font-medium text-xs text-slate-400 uppercase tracking-wider py-3 px-5 border-b border-slate-800">Status</th>
+                                        <th className="font-medium text-xs text-slate-400 uppercase tracking-wider py-3 px-5 border-b border-slate-800 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -130,9 +131,9 @@ export default function OfficerDashboard() {
                                                     initial={{ opacity: 0, x: -10 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     exit={{ opacity: 0, height: 0 }}
-                                                    className={`hover:bg-forest-800/20 transition-colors ${isActive ? 'bg-alert-950/20' : ''}`}
+                                                    className={`hover:bg-slate-800/40 transition-colors ${isActive ? 'bg-alert-950/20' : ''}`}
                                                 >
-                                                    <td className="py-3 px-5 border-b border-forest-800/50">
+                                                    <td className="py-3 px-5 border-b border-slate-800/50">
                                                         <div className="flex items-center gap-2">
                                                             {isActive && <span className="h-1.5 w-1.5 rounded-full bg-alert-500 animate-pulse shrink-0 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />}
                                                             <span className="truncate max-w-[120px] text-slate-200 font-mono text-sm">
@@ -140,20 +141,20 @@ export default function OfficerDashboard() {
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="py-3 px-5 border-b border-forest-800/50">
+                                                    <td className="py-3 px-5 border-b border-slate-800/50">
                                                         <span className={`badge ${alert.alert_type === 'weapon' ? 'badge-critical' : 'badge-warning'} uppercase`}>
                                                             {alert.alert_type}
                                                         </span>
                                                     </td>
-                                                    <td className="py-3 px-5 border-b border-forest-800/50 text-forest-300 text-sm">
+                                                    <td className="py-3 px-5 border-b border-slate-800/50 text-slate-300 text-sm">
                                                         {new Date(alert.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     </td>
-                                                    <td className="py-3 px-5 border-b border-forest-800/50">
-                                                        <span className={`text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border ${alert.status === 'resolved' ? 'border-forest-500/30 text-forest-400 bg-forest-900/30' : 'border-alert-500/30 text-alert-400 bg-alert-900/30'}`}>
+                                                    <td className="py-3 px-5 border-b border-slate-800/50">
+                                                        <span className={`text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border ${alert.status === 'resolved' ? 'border-slate-500/30 text-slate-400 bg-slate-900/30' : 'border-alert-500/30 text-alert-400 bg-alert-900/30'}`}>
                                                             {alert.status}
                                                         </span>
                                                     </td>
-                                                    <td className="py-3 px-5 border-b border-forest-800/50 text-right space-x-2">
+                                                    <td className="py-3 px-5 border-b border-slate-800/50 text-right space-x-2">
                                                         {isActive && (
                                                             <button 
                                                                 onClick={() => handleResolve(alert.alert_id)} 

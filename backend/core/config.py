@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str = "alerts@poachingdetection.com"
     EMAILS_FROM_NAME: str = "Poaching Detection Alert"
 
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+
     class Config:
         case_sensitive = True
         env_file = str(env_path)

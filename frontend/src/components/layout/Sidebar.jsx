@@ -44,6 +44,12 @@ const navigation = [
         icon: Settings,
         description: 'Configuration & profile',
     },
+    {
+        name: 'Analytics',
+        href: '/analytics',
+        icon: Activity,
+        description: 'Detection trends & stats',
+    },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
@@ -73,21 +79,26 @@ export default function Sidebar({ collapsed, onToggle }) {
             )}
         >
             {/* Logo + Collapse Toggle */}
-            <div className="flex h-16 shrink-0 items-center border-b border-forest-800 px-4 gap-3">
-                <div className="flex items-center gap-2 shrink-0 text-forest-500">
-                    <ShieldAlert size={22} className="shrink-0" />
-                </div>
+            <div className={cn("flex h-16 shrink-0 items-center border-b border-forest-800 transition-all", collapsed ? "justify-center" : "px-4 gap-3")}>
                 {!collapsed && (
-                    <span className="text-base font-bold tracking-widest text-slate-100 flex-1 truncate">
-                        GUARDIAN<span className="text-forest-500">AI</span>
-                    </span>
+                    <>
+                        <div className="flex items-center gap-2 shrink-0 text-forest-500">
+                            <ShieldAlert size={22} className="shrink-0" />
+                        </div>
+                        <span className="text-base font-bold tracking-widest text-slate-100 flex-1 truncate">
+                            GUARDIAN<span className="text-forest-500">AI</span>
+                        </span>
+                    </>
                 )}
                 <button
                     onClick={onToggle}
-                    className="p-1.5 rounded-md text-forest-500 hover:text-forest-300 hover:bg-forest-800/50 transition-colors ml-auto shrink-0"
+                    className={cn(
+                        "p-2 rounded-md text-forest-400 hover:text-white hover:bg-forest-800/80 transition-colors shrink-0",
+                        !collapsed && "ml-auto"
+                    )}
                     aria-label="Toggle sidebar"
                 >
-                    {collapsed ? <Menu size={16} /> : <ChevronLeft size={16} />}
+                    {collapsed ? <Menu size={24} /> : <Menu size={20} />}
                 </button>
             </div>
 
@@ -97,12 +108,12 @@ export default function Sidebar({ collapsed, onToggle }) {
                     const role = user?.role || 'ranger';
                     if (role === 'admin') return true;
                     if (role === 'officer') {
-                        // Officers only see incident response and system settings
-                        return ['Officer Dashboard', 'Active Alerts', 'System Settings'].includes(item.name);
+                        // Officers only see incident response, analytics, and detection results
+                        return ['Officer Dashboard', 'Active Alerts', 'Detection Results', 'Analytics'].includes(item.name);
                     }
                     if (role === 'ranger') {
-                        // Rangers see standard dashboard, upload, results, and settings
-                        return ['Dashboard', 'Upload Image', 'Detection Results', 'System Settings'].includes(item.name);
+                        // Rangers see standard dashboard, upload, and results
+                        return ['Dashboard', 'Upload Image', 'Detection Results'].includes(item.name);
                     }
                     return true;
                 }).map((item) => {

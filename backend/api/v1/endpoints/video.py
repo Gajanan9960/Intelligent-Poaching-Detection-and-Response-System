@@ -99,8 +99,12 @@ async def list_videos(
 ):
     db = get_database()
     
+    match_stage = {}
+    if current_user.role not in ("admin", "officer"):
+        match_stage = {"user_id": current_user.id}
+    
     pipeline = [
-        {"$match": {"user_id": current_user.id}},
+        {"$match": match_stage},
         {"$lookup": {
             "from": "detections",
             "localField": "_id",
@@ -165,3 +169,77 @@ async def clear_all_videos_and_detections(
                     pass
 
     return {"status": "success", "message": "All previous detections and videos cleared."}
+
+@router.get("/{video_id}")
+async def get_video(
+    video_id: str,
+    current_user: User = Depends(deps.get_current_user)
+):
+    db = get_database()
+    
+    match_stage = {"_id": video_id}
+    if current_user.role not in ("admin", "officer"):
+        match_stage["user_id"] = current_user.id
+    
+    pipeline = [
+        {"$match": match_stage},
+        {"$lookup": {
+            "from": "detections",
+            "localField": "_id",
+            "foreignField": "video_id",
+            "as": "detections"
+        }}
+    ]
+    
+    videos = await db.videos.aggregate(pipeline).to_list(length=1)
+    if not videos:
+        raise HTTPException(status_code=404, detail="Video not found")
+        
+    v = videos[0]
+    # Fix _id to id for frontend
+    v["id"] = str(v.pop("_id"))
+    if "detections" in v:
+        for d in v["detections"]:
+            if "_id" in d:
+                d["id"] = str(d.pop("_id"))
+            if "video_id" in d:
+                d["video_id"] = str(d["video_id"])
+            # Alias fields for frontend backwards compatibility
+            d["detected_class"] = d.get("object_type") or d.get("detected_class", "")
+            d["confidence"] = d.get("confidence_score") or d.get("confidence", 0.0)
+            d["image_url"] = d.get("frame_image_path") or d.get("image_url", "")
+            d["timestamp"] = d.get("detected_at") or d.get("timestamp", "")
+            
+    return v
+
+@router.delete("/{video_id}")
+async def delete_video(
+    video_id: str,
+    current_user: User = Depends(deps.get_current_user)
+):
+    db = get_database()
+    video = await db.videos.find_one({"_id": video_id, "user_id": current_user.id})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    import glob
+    # 1. Get detection IDs for alert cleanup
+    det_docs = await db.detections.find(
+        {"video_id": video_id}, {"detection_id": 1}
+    ).to_list(length=None)
+    detection_ids = [d["detection_id"] for d in det_docs if "detection_id" in d]
+
+    # 2. Delete alerts, detections, and video
+    if detection_ids:
+        await db.alerts.delete_many({"detection_id": {"$in": detection_ids}})
+    await db.detections.delete_many({"video_id": video_id})
+    await db.videos.delete_one({"_id": video_id})
+
+    # 3. Clean up physical files
+    for f in glob.glob(f"backend/static/uploads/{video_id}_*"):
+        try:
+            os.remove(f)
+        except OSError:
+            pass
+
+    return {"status": "success", "message": "Video deleted and scan cancelled."}

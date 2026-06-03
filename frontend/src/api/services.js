@@ -87,3 +87,13 @@ export const alertService = {
     /** Resolve an alert */
     resolve: (alertId) => api.put(`/alerts/${alertId}/resolve`),
 };
+
+// ─── Settings Services ──────────────────────────────────────
+export const settingsService = {
+    /** Get system settings */
+    get: () => api.get('/settings/'),
+
+    /** Update system settings */
+    update: (settings) => api.put('/settings/', settings),
+};
+

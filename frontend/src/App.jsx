@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import UploadVideo from './pages/UploadVideo';
 import DetectionResults from './pages/DetectionResults';
 import AlertsPage from './pages/AlertsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import OfficerDashboard from './pages/OfficerDashboard';
 import SystemSettings from './pages/SystemSettings';
 import NotFound from './pages/NotFound';
@@ -18,7 +19,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 
 // ─── Protected Route Guard ─────────────────────────────────
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -27,6 +28,11 @@ const ProtectedRoute = ({ children }) => {
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+  
+  if (allowedRoles && !allowedRoles.includes(user.role || 'ranger')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
   return children;
 };
 
@@ -95,7 +101,7 @@ function AppRoutes() {
       <Route
         path="/officer-dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'officer']}>
             <OfficerDashboard />
           </ProtectedRoute>
         }
@@ -127,15 +133,23 @@ function AppRoutes() {
       <Route
         path="/alerts"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'officer']}>
             <AlertsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'officer']}>
+            <AnalyticsPage />
           </ProtectedRoute>
         }
       />
       <Route
         path="/settings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin']}>
             <SystemSettings />
           </ProtectedRoute>
         }

@@ -33,7 +33,7 @@ export default function ForgotPassword() {
                 <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-forest-500/5 blur-3xl rounded-full" />
             </div>
 
-            <div className="w-full max-w-md space-y-8 glass-panel p-8 sm:p-10 rounded-2xl relative z-10">
+                <div className="w-full max-w-md space-y-8 glass-panel p-8 sm:p-10 rounded-2xl relative z-10">
                 {!sent ? (
                     <>
                         <div className="text-center">

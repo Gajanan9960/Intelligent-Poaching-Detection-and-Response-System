@@ -7,11 +7,17 @@ import Topbar from './Topbar';
  * Combines collapsible sidebar + topbar + main content area.
  * All authenticated pages should use this as wrapping layout.
  */
-export default function AppLayout({ children, title, subtitle, actions }) {
+export default function AppLayout({ children, title, subtitle, actions, theme = 'ranger' }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+    const isOfficer = theme === 'officer';
+    const bgClass = isOfficer ? 'bg-slate-950' : 'bg-forest-950';
+    const glowClass = isOfficer 
+        ? 'from-amber-900/10 via-transparent to-transparent' 
+        : 'from-forest-800/5 via-transparent to-transparent';
+
     return (
-        <div className="flex h-screen bg-forest-950 overflow-hidden">
+        <div className={`flex h-screen ${bgClass} overflow-hidden`}>
             {/* Sidebar */}
             <Sidebar
                 collapsed={sidebarCollapsed}
@@ -26,7 +32,7 @@ export default function AppLayout({ children, title, subtitle, actions }) {
                 {/* Scrollable content area */}
                 <main className="flex-1 overflow-auto relative">
                     {/* Ambient background gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-forest-800/5 via-transparent to-transparent pointer-events-none" />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${glowClass} pointer-events-none`} />
                     <div className="relative z-10">
                         {children}
                     </div>

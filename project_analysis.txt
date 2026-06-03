@@ -1,0 +1,146 @@
+================================================================================
+INTELLIGENT POACHING DETECTION & RESPONSE SYSTEM: ARCHITECTURAL & SECURITY ANALYSIS
+================================================================================
+
+This document provides a comprehensive overview of the current GuardianAI architecture, 
+identifies critical code-level and logical loopholes (bugs, security flaws, performance 
+bottlenecks), and proposes actionable features and structural improvements to complete 
+the project.
+
+--------------------------------------------------------------------------------
+1. PROJECT ARCHITECTURE OVERVIEW
+--------------------------------------------------------------------------------
+The Intelligent Poaching Detection and Response System is designed to assist forest 
+authorities in monitoring protected areas. 
+
+* Backend: FastAPI (Python) serving a REST API, utilizing Motor for async MongoDB 
+  interactions.
+* Machine Learning: Ultralytics YOLOv8. It loads a custom-trained model (best.pt) or 
+  falls back to a pre-trained yolov8n.pt model. Detections are mapped to four domain 
+  classes: poacher, weapon, animal, ranger.
+* Frontend: React (Vite) single-page application, TailwindCSS, Framer Motion for 
+  animations, and Lucide react-icons.
+* Alerts: SMTP email dispatches (via aiosmtplib) containing interactive HTML layouts, 
+  threat levels, confidence rankings, and annotated frame attachments.
+
+--------------------------------------------------------------------------------
+2. IDENTIFIED CRITICAL LOOPHOLES & BUGS
+--------------------------------------------------------------------------------
+
+[Loophole A] Critical Threat Suppression Logic (Logical Vulnerability)
+* Location: backend/services/detection_service.py (Lines 159-163, 201-207)
+* Issue: 
+  1. The code explicitly suppresses "poacher" detections if a "ranger" is present in 
+     the same frame:
+     ```python
+     if mapped_class == "poacher" and has_ranger:
+         continue
+     ```
+     This means if a poacher is near a ranger (e.g., stalking, confronting, or 
+     attacking them), or if the model misclassifies a background object as a ranger, 
+     the poacher is completely ignored and filtered out.
+  2. If a ranger is present, weapon detections are marked as safe (is_critical = False). 
+     If a poacher holding a weapon and a ranger are both in the frame, no critical alert 
+     will fire for the weapon.
+* Severity: CRITICAL (Bypasses core surveillance objective).
+
+[Loophole B] Unprotected System Settings Endpoint (Security Vulnerability)
+* Location: backend/api/v1/endpoints/settings.py (Lines 14-44)
+* Issue: The GET and PUT routes for system settings do not enforce any role checking or 
+  authentication dependencies. Anyone (including unauthenticated guests) can view the 
+  settings or send a PUT request to disable email alerts, decrease the confidence 
+  threshold to 10% (causing alert storms), or disable strict mode.
+* Severity: HIGH (Exposes system administration to unauthorized access).
+
+[Loophole C] SMTP Configuration AttributeError in Password Reset (Crash Bug)
+* Location: backend/core/email.py (Lines 12-37) & backend/core/config.py
+* Issue: The `send_email` utility (used by the forgot-password endpoint) checks for 
+  `settings.SMTP_HOST`, `settings.SMTP_PORT`, `settings.SMTP_USER`, and 
+  `settings.SMTP_PASSWORD`. However, the Pydantic `Settings` class in `core/config.py` 
+  does not define these attributes (it only defines `EMAIL_ADDRESS`, `EMAIL_APP_PASSWORD`, 
+  `OFFICER_EMAIL`). This causes an `AttributeError` on forgot-password requests, leading 
+  to a 500 Internal Server Error.
+* Severity: HIGH (Breaks password reset capability).
+
+[Loophole D] Email and Resource Flooding during Video Processing (Scalability Loophole)
+* Location: backend/services/detection_service.py (Lines 168-232)
+* Issue: For video uploads, YOLOv8 processes the video frame-by-frame. If a threat is 
+  detected in every frame of a 10-second video at 30 FPS, the system writes 300 separate 
+  image files to disk, inserts 300 database rows, and triggers 300 background email sends 
+  simultaneously. This will immediately trigger Gmail rate-limiting/IP blocks, flood the 
+  officer's email inbox, and rapidly exhaust server storage.
+* Severity: MEDIUM-HIGH (Causes SMTP blocking, performance degradation, and disk filling).
+
+[Loophole E] COCO Model Fallback Ranger Misclassification (Usability Loophole)
+* Location: backend/services/detection_service.py (Lines 118-125)
+* Issue: If the custom model `best.pt` fails to load and the system falls back to the COCO 
+  model (`yolov8n.pt`), the class mapping maps any "person" to "poacher". Since the COCO 
+  model lacks a "ranger" class, rangers will always be detected as "persons" and incorrectly 
+  flagged as "poachers", generating constant false alarms.
+* Severity: MEDIUM (Floods dashboard with false alerts during development or model load failure).
+
+[Loophole F] Missing Backend Route for `/video/{id}` (Code Inconsistency)
+* Location: frontend/src/api/services.js (Line 45)
+* Issue: The frontend API definition has a route `getById: (id) => api.get(`/video/${id}`)`. 
+  However, `backend/api/v1/endpoints/video.py` does not define a GET endpoint for individual 
+  video IDs. While the frontend pages currently bypass this by filtering the local state, 
+  this dead code will break if the frontend tries to load detail pages directly on refresh.
+* Severity: LOW (Code cleanup / structural discrepancy).
+
+[Loophole G] CPU-Bound Hashing Blocking FastAPI Event Loop (Performance Bottleneck)
+* Location: backend/core/security.py (Lines 31-44)
+* Issue: The `verify_password` and `get_password_hash` methods are async but run 
+  synchronous, CPU-bound bcrypt operations on the main thread without utilizing a thread 
+  pool executor. This blocks the event loop for 100-300ms per authentication call, 
+  severely limiting concurrent request handling during login spikes.
+* Severity: LOW-MEDIUM (Performance optimization).
+
+--------------------------------------------------------------------------------
+3. ACTIONABLE IDEAS FOR PROJECT COMPLETION & ENHANCEMENT
+--------------------------------------------------------------------------------
+
+[Idea 1] Refined Alert & Bounding Box Arbitration
+* Replace the absolute poacher-suppression rule with spatial analysis. Instead of dropping 
+  poachers when rangers are present, trigger a modified alert ("Co-presence Alert: Ranger 
+  and Person in Sector").
+* Check bounding box overlaps (Intersection over Union - IoU). A weapon should only be 
+  marked "safe" if its bounding box intersects significantly with a detected "ranger". 
+  If it overlaps with a "poacher" or is isolated near an "animal", flag it as critical.
+
+[Idea 2] Video Frame Sampling & Alert Throttling
+* Frame Sampling: Instead of running inference on every single video frame, process every 
+  nth frame (e.g., 3 frames per second) to reduce processing overhead.
+* Alert Throttling/Aggregation: Group detections within the same video upload. Send a 
+  single consolidated email alert per video session containing a summary of threat counts, 
+  the highest confidence score, and 1-3 keyframes (highest confidence frames) as attachments.
+
+[Idea 3] Secure System Settings
+* Add role-based authentication to the system settings GET and PUT endpoints using 
+  `Depends(deps.RoleChecker(["admin", "officer"]))` to ensure settings can only be altered 
+  by authenticated personnel.
+
+[Idea 4] Unified SMTP Settings & Gmail Integration
+* Add standard SMTP configuration fields (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`) 
+  to the Pydantic Settings class with defaults falling back to Gmail SMTP using the existing 
+  `EMAIL_ADDRESS` and `EMAIL_APP_PASSWORD`.
+* Update `core/email.py` to gracefully fall back to these defaults if specific SMTP fields 
+  are missing in the environment.
+
+[Idea 5] WebSockets for Real-time Dashboard Updates
+* Implement WebSockets or Server-Sent Events (SSE) in FastAPI.
+* When a critical detection is made in the background thread, immediately push a message 
+  to the frontend dashboard via WebSocket, allowing rangers to receive immediate visual 
+  and audio alarms without relying on the current 15-second client-side HTTP polling loop.
+
+[Idea 6] Live RTSP Stream Surveillance
+* Extend the "Upload" feature to support configuring live RTSP or HLS stream links from 
+  IP cameras.
+* Run a background worker that periodically polls a frame from each active camera stream, 
+  performs YOLOv8 inference, and registers detections in the database.
+
+[Idea 7] Audit Trails for Incident Resolutions
+* Add a resolution schema to alerts. When an officer clicks "Resolve", require them to select 
+  a resolution category ("False Positive: Shadow", "False Positive: Wildlife", "Dispatched 
+  Ranger Team", "Ranger Patrol Confirmed") and add optional investigation notes.
+
+================================================================================

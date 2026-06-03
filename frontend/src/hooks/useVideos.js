@@ -35,15 +35,19 @@ export function useVideos(pollInterval = 10000) {
         fetchVideos();
     }, [fetchVideos]);
 
-    // Poll for updates (silent refresh)
-    useEffect(() => {
-        if (!pollInterval) return;
-        const interval = setInterval(() => fetchVideos(true), pollInterval);
-        return () => clearInterval(interval);
-    }, [fetchVideos, pollInterval]);
-
     // Check if any video is currently processing
     const hasProcessing = videos.some(v => v.status === 'processing');
+
+    // Poll for updates (silent refresh)
+    useEffect(() => {
+        // Use a faster 2.5s poll if there are processing videos, otherwise use default
+        const currentInterval = hasProcessing ? 2500 : pollInterval;
+        if (!currentInterval) return;
+        
+        const interval = setInterval(() => fetchVideos(true), currentInterval);
+        return () => clearInterval(interval);
+    }, [fetchVideos, pollInterval, hasProcessing]);
+
 
     const clearAll = useCallback(async () => {
         try {

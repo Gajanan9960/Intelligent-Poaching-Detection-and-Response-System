@@ -90,12 +90,19 @@ class DetectionService:
 
             detections = []
             alerts_generated = []
+            
+            max_confidence_in_video = 0.0
+            best_frame_path = None
+            primary_alert_type = None
 
             is_video = file_path.lower().endswith(('.mp4', '.avi', '.mov'))
             
-            # Simplified handling for images vs. videos (acting on image for now based on context)
-            # Results is a list of Results objects
+            # Simplified handling for images vs. videos
             for batch_idx, r in enumerate(results):
+                # Frame sampling: process every 10th frame for video
+                if is_video and batch_idx % 10 != 0:
+                    continue
+                
                 boxes = r.boxes
                 valid_boxes = []
                 has_ranger = False
@@ -156,10 +163,6 @@ class DetectionService:
                 # Pre-filter boxes
                 final_boxes = []
                 for box, mapped_class, confidence in valid_boxes:
-                    # Rule: ranger and poacher cannot be together in the same frame
-                    # We suppress 'poacher' detections if a 'ranger' is detected
-                    if mapped_class == "poacher" and has_ranger:
-                        continue
                     final_boxes.append((box, mapped_class, confidence))
 
                 if not final_boxes:
@@ -195,21 +198,26 @@ class DetectionService:
 
                     # 2. Check if this is a critical threat and trigger alert
                     is_critical = False
+                    alert_class_name = class_name
                     if class_name == "poacher":
                         is_critical = True
-                    elif class_name == "weapon":
-                        # Rule: If a ranger and weapon are detected together, it is safe
-                        # Rule: If weapon is with poacher or animal, it is high-risk threat
                         if has_ranger:
+                            alert_class_name = "co-presence (ranger & poacher)"
+                    elif class_name == "weapon":
+                        # If just a ranger with a weapon, not critical
+                        # If weapon is with poacher or animal, it is a high-risk threat
+                        if has_ranger and not has_poacher:
                             is_critical = False
                         else:
                             is_critical = True
+                            if has_ranger and has_poacher:
+                                alert_class_name = "weapon in conflict zone"
                     
                     if is_critical:
-                        print(f"Critical threat detected: {class_name} ({confidence:.2f})")
+                        print(f"Critical threat detected: {alert_class_name} ({confidence:.2f})")
                         alert_data = AlertCreate(
                             detection_id=det_dict["detection_id"],
-                            alert_type=class_name.lower(),
+                            alert_type=alert_class_name.lower(),
                             officer_email=self.email_service.officer_email,
                             status=AlertStatus.sent
                         )
@@ -221,14 +229,21 @@ class DetectionService:
                         alert_dict["_id"] = str(result.inserted_id)
                         alerts_generated.append(alert_dict)
                         
-                        # 3. Dispatch Email Contextually
-                        # We run this in the background asynchronously so we don't block the API
-                        if email_alerts:
-                            self.email_service.send_alert_email_background(
-                                alert_type=class_name, 
-                                confidence=confidence, 
-                                image_path=frame_path
-                            )
+                        # Store context for aggregated email
+                        if confidence > max_confidence_in_video:
+                            max_confidence_in_video = confidence
+                            best_frame_path = frame_path
+                            primary_alert_type = alert_class_name
+                        
+            # 3. Dispatch Email Contextually (Aggregated)
+            # We send exactly ONE email after processing all frames
+            if email_alerts and alerts_generated and best_frame_path:
+                print(f"Sending aggregated email for {len(alerts_generated)} alerts.")
+                self.email_service.send_alert_email_background(
+                    alert_type=primary_alert_type, 
+                    confidence=max_confidence_in_video, 
+                    image_path=best_frame_path
+                )
                         
             # 4. Mark video as completed
             await db.videos.update_one(

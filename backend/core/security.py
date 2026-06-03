@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from datetime import datetime, timedelta
 from typing import Any, Union, Optional
 
@@ -29,8 +30,8 @@ def _verify_password_sync(plain_password: str, hashed_password: str) -> bool:
         return False
 
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password synchronously."""
-    return _verify_password_sync(plain_password, hashed_password)
+    """Verify password asynchronously using a thread pool."""
+    return await asyncio.to_thread(_verify_password_sync, plain_password, hashed_password)
 
 def _get_password_hash_sync(password: str) -> str:
     """Synchronous bcrypt hashing (CPU-bound)."""
@@ -40,6 +41,5 @@ def _get_password_hash_sync(password: str) -> str:
     return hashed.decode('utf-8')
 
 async def get_password_hash(password: str) -> str:
-    """Hash password synchronously."""
-    return _get_password_hash_sync(password)
-
+    """Hash password asynchronously using a thread pool."""
+    return await asyncio.to_thread(_get_password_hash_sync, password)

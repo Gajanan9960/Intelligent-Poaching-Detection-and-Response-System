@@ -6,6 +6,7 @@ import {
     ShieldCheck, Bell, Activity, Terminal,
     Settings, Save, Key, Sliders, Database, Cpu
 } from 'lucide-react';
+import { settingsService } from '../api/services';
 
 export default function SystemSettings() {
     const { user } = useAuth();
@@ -21,34 +22,35 @@ export default function SystemSettings() {
     const [logs, setLogs] = useState([]);
 
     useEffect(() => {
-        // Generate pseudo-logs based on video activity
-        const generatedLogs = [];
-        generatedLogs.push({ time: new Date().toLocaleTimeString(), level: 'INFO', message: 'System boot sequence initiated. Neural Engine v4.2 online.' });
-        generatedLogs.push({ time: new Date(Date.now() - 5000).toLocaleTimeString(), level: 'INFO', message: 'Connected to remote telemetry database.' });
-
-        videos.slice(0, 5).forEach(v => {
-            const time = new Date(v.uploaded_at).toLocaleTimeString();
-            generatedLogs.push({ time, level: 'INFO', message: `Incoming feed encrypted & received: ${v.filename}` });
-
-            if (v.status === 'completed') {
-                generatedLogs.push({ time: new Date(new Date(v.uploaded_at).getTime() + 1000).toLocaleTimeString(), level: 'SYSTEM', message: `YOLOv8 inference completed in 1.2s on ${v.filename}` });
-
-                const critical = v.detections?.filter(d => ['poacher', 'weapon'].includes(d.detected_class?.toLowerCase()));
-                if (critical?.length > 0) {
-                    generatedLogs.push({ time: new Date(new Date(v.uploaded_at).getTime() + 1500).toLocaleTimeString(), level: 'WARN', message: `Critical threats logged: ${critical.map(c => c.detected_class).join(', ')}` });
-                    if (emailAlerts) {
-                        generatedLogs.push({ time: new Date(new Date(v.uploaded_at).getTime() + 2000).toLocaleTimeString(), level: 'CRITICAL', message: `Outbound email dispatched to response team.` });
-                    }
+        const loadSettings = async () => {
+            try {
+                const res = await settingsService.get();
+                if (res.data) {
+                    setEmailAlerts(res.data.email_alerts);
+                    setStrictMode(res.data.strict_mode);
+                    setConfidenceThreshold(res.data.confidence_threshold);
                 }
+            } catch (err) {
+                console.error("Failed to load settings:", err);
             }
-        });
+        };
+        loadSettings();
 
-        setLogs(generatedLogs.sort((a, b) => b.time.localeCompare(a.time)));
-    }, [videos, emailAlerts]);
+        setLogs([{ time: new Date().toLocaleTimeString(), level: 'SYSTEM', message: 'Live telemetry stream is currently offline (Pending Phase B Integration).' }]);
+    }, []);
 
-    const handleSave = () => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+    const handleSave = async () => {
+        try {
+            await settingsService.update({
+                email_alerts: emailAlerts,
+                strict_mode: strictMode,
+                confidence_threshold: confidenceThreshold
+            });
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (err) {
+            console.error("Failed to save settings:", err);
+        }
     };
 
     return (
@@ -75,7 +77,7 @@ export default function SystemSettings() {
                         </div>
                         <div>
                             <p className="text-xs text-emerald-100/50 uppercase tracking-widest font-mono">Inference Engine</p>
-                            <p className="text-lg font-semibold text-emerald-400">ONLINE</p>
+                            <p className="text-lg font-semibold text-slate-500">N/A</p>
                         </div>
                     </div>
                     <div className="bg-black/40 border border-emerald-900/30 rounded-3xl p-6 flex items-center gap-4">
@@ -84,7 +86,7 @@ export default function SystemSettings() {
                         </div>
                         <div>
                             <p className="text-xs text-blue-100/50 uppercase tracking-widest font-mono">Server Load</p>
-                            <p className="text-lg font-semibold text-blue-400">14%</p>
+                            <p className="text-lg font-semibold text-slate-500">N/A</p>
                         </div>
                     </div>
                     <div className="md:col-span-2 bg-black/40 border border-emerald-900/30 rounded-3xl p-6 flex items-center justify-between">

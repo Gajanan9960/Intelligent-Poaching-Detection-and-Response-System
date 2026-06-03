@@ -92,13 +92,15 @@ export default function Topbar({ title, subtitle, actions }) {
 
                         {/* Menu items */}
                         <div className="p-1">
-                            <button
-                                onClick={() => { navigate('/settings'); setDropdownOpen(false); }}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-forest-300 hover:bg-forest-800/50 hover:text-white transition-colors"
-                            >
-                                <Settings className="h-4 w-4 text-forest-500" />
-                                System Settings
-                            </button>
+                            {user?.role === 'admin' && (
+                                <button
+                                    onClick={() => { navigate('/settings'); setDropdownOpen(false); }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-forest-300 hover:bg-forest-800/50 hover:text-white transition-colors"
+                                >
+                                    <Settings className="h-4 w-4 text-forest-500" />
+                                    System Settings
+                                </button>
+                            )}
                             <button
                                 onClick={handleLogout}
                                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-forest-300 hover:bg-alert-900/40 hover:text-alert-400 transition-colors"
